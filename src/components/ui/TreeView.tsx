@@ -52,8 +52,11 @@ const TreeItem: React.FC<TreeItemProps> = ({
   }
 
   const handleItemClick = (e: React.MouseEvent) => {
-    if (isFolder && !e.defaultPrevented) {
-      onNavigate(item.Key)
+    if (isFolder) {
+      if (!e.defaultPrevented) {
+        setIsExpanded(!isExpanded)
+        onNavigate(item.Key)
+      }
     }
   }
 
@@ -182,11 +185,15 @@ export const TreeView: React.FC<TreeViewProps> = ({
 }) => {
   const rootItems = files.filter(file => {
     if (!currentPath) {
-      return !file.Key.includes('/') || (file.Key.match(/\//g) || []).length === 1
+      const segments = file.Key.split('/').filter(Boolean)
+      return segments.length === 1 || (segments.length === 0 && file.Key === '')
     }
-    return file.Key.startsWith(currentPath) && 
-           file.Key !== currentPath &&
-           !file.Key.slice(currentPath.length).includes('/')
+    
+    const relativePath = file.Key.slice(currentPath.length)
+    const segments = relativePath.split('/').filter(Boolean)
+    
+    return file.Key === currentPath || 
+           (file.Key.startsWith(currentPath) && (segments.length === 1 || (segments.length === 1 && file.Key.endsWith('/'))))
   })
 
   return (
