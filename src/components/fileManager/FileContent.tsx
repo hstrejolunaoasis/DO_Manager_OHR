@@ -4,17 +4,27 @@ import { FileList } from './FileList'
 import { TreeView } from '../ui/TreeView'
 import { UploadArea } from './UploadArea'
 
-export function FileContent() {
+interface FileContentProps {
+  paneId: string
+}
+
+export function FileContent({ paneId }: FileContentProps) {
   const { 
     files, 
-    viewMode, 
-    activeTab, 
+    panes,
+    activePaneId,
     navigateToFolder, 
     handleDelete, 
     handleDownload, 
     handleCopyUrl, 
     openRenameModal 
   } = useFileManager()
+
+  const pane = panes.find(p => p.id === paneId)
+  if (!pane) return null
+
+  const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
+  const isActivePane = paneId === activePaneId
 
   if (!files) {
     return (
@@ -28,12 +38,12 @@ export function FileContent() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Upload area */}
-      <UploadArea />
+      {/* Only show upload area in active pane */}
+      {isActivePane && <UploadArea />}
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto mt-6">
-        {viewMode === 'tree' ? (
+        {activeTab?.viewMode === 'tree' ? (
           <TreeView
             files={files}
             currentPath={activeTab?.path || ''}

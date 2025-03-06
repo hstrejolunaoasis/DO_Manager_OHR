@@ -18,8 +18,30 @@ export interface TabState {
   viewMode: 'grid' | 'list' | 'tree'
 }
 
+export interface PaneState {
+  id: string
+  tabs: TabState[]
+  activeTabId: string
+  width: number // Percentage of total width
+}
+
 // Context type
 interface FileManagerContextType {
+  // Pane Management
+  panes: PaneState[]
+  activePaneId: string
+  setActivePaneId: (id: string) => void
+  addPane: () => void
+  removePane: (id: string) => void
+  updatePaneWidth: (id: string, width: number) => void
+  moveTabToPane: (tabId: string, fromPaneId: string, toPaneId: string) => void
+  getActivePane: () => PaneState
+  
+  // Tab operations
+  handleTabClick: (tabId: string) => void
+  handleTabClose: (tabId: string) => void
+  addNewTab: () => void
+  
   // State
   viewMode: 'grid' | 'list' | 'tree'
   setViewMode: (mode: 'grid' | 'list' | 'tree') => void
@@ -37,14 +59,6 @@ interface FileManagerContextType {
   setUploadProgress: (progress: { [key: string]: number }) => void
   isUploading: boolean
   setIsUploading: (isUploading: boolean) => void
-  
-  // Tabs
-  tabs: TabState[]
-  activeTabId: string
-  activeTab: TabState | undefined
-  handleTabClick: (tabId: string) => void
-  handleTabClose: (tabId: string) => void
-  addNewTab: () => void
   
   // Navigation
   navigateToFolder: (path: string) => void
@@ -83,6 +97,21 @@ const FileManagerContext = createContext<FileManagerContextType | undefined>(und
 
 // Provider component
 export function FileManagerProvider({ children }: { children: ReactNode }) {
+  // Pane state
+  const [panes, setPanes] = useState<PaneState[]>([{
+    id: 'pane-1',
+    tabs: [{ 
+      id: 'root', 
+      path: '', 
+      label: 'Root',
+      searchQuery: '',
+      viewMode: 'grid'
+    }],
+    activeTabId: 'root',
+    width: 100
+  }])
+  const [activePaneId, setActivePaneId] = useState('pane-1')
+
   // View state
   const [gridSize, setGridSize] = useState(200)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
@@ -95,28 +124,33 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   // Upload state
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [isUploading, setIsUploading] = useState(false)
-  
-  // Tab state
-  const [tabs, setTabs] = useState<TabState[]>([{ 
-    id: 'root', 
-    path: '', 
-    label: 'Root',
-    searchQuery: '',
-    viewMode: 'grid'
-  }])
-  const [activeTabId, setActiveTabId] = useState('root')
 
-  const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
+  // Get active pane and tab
+  const getActivePane = useCallback(() => {
+    return panes.find(p => p.id === activePaneId) || panes[0]
+  }, [panes, activePaneId])
+
+  const activeTab = useMemo(() => {
+    const activePane = getActivePane()
+    return activePane.tabs.find(t => t.id === activePane.activeTabId)
+  }, [getActivePane])
 
   // View mode getter and setter
   const viewMode = activeTab?.viewMode || 'grid'
   const setViewMode = useCallback((mode: 'grid' | 'list' | 'tree') => {
-    setTabs(prevTabs => prevTabs.map(tab =>
-      tab.id === activeTabId
-        ? { ...tab, viewMode: mode }
-        : tab
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
+        ? {
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? { ...tab, viewMode: mode }
+                : tab
+            )
+          }
+        : pane
     ))
-  }, [activeTabId])
+  }, [activePaneId])
 
   // Data fetching
   const { data: files, error, mutate } = useSWR<FileObject[]>(
@@ -128,57 +162,181 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     fetcher
   )
 
-  // Tab operations
-  const handleTabClick = useCallback((tabId: string) => {
-    setActiveTabId(tabId)
+  // Pane operations
+  const addPane = useCallback(() => {
+    const newPaneId = `pane-${Date.now()}`
+    const newTabId = `tab-${Date.now()}`
+    
+    setPanes(prevPanes => {
+      const totalPanes = prevPanes.length
+      const newWidth = 100 / (totalPanes + 1)
+      
+      return [
+        ...prevPanes.map(pane => ({ ...pane, width: newWidth })),
+        {
+          id: newPaneId,
+          tabs: [{
+            id: newTabId,
+            path: '',
+            label: 'Root',
+            searchQuery: '',
+            viewMode: 'grid'
+          }],
+          activeTabId: newTabId,
+          width: newWidth
+        }
+      ]
+    })
+    
+    setActivePaneId(newPaneId)
   }, [])
 
-  const handleTabClose = useCallback((tabId: string) => {
-    if (tabs.length === 1) return // Don't close the last tab
+  const removePane = useCallback((paneId: string) => {
+    setPanes(prevPanes => {
+      if (prevPanes.length === 1) return prevPanes // Don't remove the last pane
+      
+      const remainingPanes = prevPanes.filter(p => p.id !== paneId)
+      const newWidth = 100 / remainingPanes.length
+      
+      return remainingPanes.map(pane => ({
+        ...pane,
+        width: newWidth
+      }))
+    })
     
-    const newTabs = tabs.filter(t => t.id !== tabId)
-    setTabs(newTabs)
-    
-    // If we're closing the active tab, switch to the last tab
-    if (tabId === activeTabId) {
-      const lastTab = newTabs[newTabs.length - 1]
-      setActiveTabId(lastTab.id)
+    // If removing active pane, switch to the first available pane
+    if (paneId === activePaneId) {
+      const newActivePane = panes.find(p => p.id !== paneId)
+      if (newActivePane) {
+        setActivePaneId(newActivePane.id)
+      }
     }
-  }, [tabs, activeTabId])
+  }, [panes, activePaneId])
+
+  const updatePaneWidth = useCallback((paneId: string, width: number) => {
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === paneId ? { ...pane, width } : pane
+    ))
+  }, [])
+
+  const moveTabToPane = useCallback((tabId: string, fromPaneId: string, toPaneId: string) => {
+    setPanes(prevPanes => {
+      const fromPane = prevPanes.find(p => p.id === fromPaneId)
+      const toPane = prevPanes.find(p => p.id === toPaneId)
+      
+      if (!fromPane || !toPane) return prevPanes
+      
+      const tab = fromPane.tabs.find(t => t.id === tabId)
+      if (!tab) return prevPanes
+      
+      return prevPanes.map(pane => {
+        if (pane.id === fromPaneId) {
+          const newTabs = pane.tabs.filter(t => t.id !== tabId)
+          const newActiveTabId = tabId === pane.activeTabId
+            ? newTabs[0]?.id || ''
+            : pane.activeTabId
+          
+          return {
+            ...pane,
+            tabs: newTabs,
+            activeTabId: newActiveTabId
+          }
+        }
+        
+        if (pane.id === toPaneId) {
+          return {
+            ...pane,
+            tabs: [...pane.tabs, tab],
+            activeTabId: tab.id
+          }
+        }
+        
+        return pane
+      })
+    })
+  }, [])
+
+  // Tab operations
+  const handleTabClick = useCallback((tabId: string) => {
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
+        ? { ...pane, activeTabId: tabId }
+        : pane
+    ))
+  }, [activePaneId])
+
+  const handleTabClose = useCallback((tabId: string) => {
+    setPanes(prevPanes => prevPanes.map(pane => {
+      if (pane.id !== activePaneId) return pane
+      
+      if (pane.tabs.length === 1) return pane // Don't close the last tab
+      
+      const newTabs = pane.tabs.filter(t => t.id !== tabId)
+      const newActiveTabId = tabId === pane.activeTabId
+        ? newTabs[newTabs.length - 1].id
+        : pane.activeTabId
+      
+      return {
+        ...pane,
+        tabs: newTabs,
+        activeTabId: newActiveTabId
+      }
+    }))
+  }, [activePaneId])
 
   const addNewTab = useCallback(() => {
     const newTabId = `tab-${Date.now()}`
-    const newTab: TabState = { 
-      id: newTabId, 
-      path: '', 
-      label: 'Root',
-      searchQuery: '',
-      viewMode: 'grid'
-    }
-    setTabs(prev => [...prev, newTab])
-    setActiveTabId(newTabId)
-  }, [])
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
+        ? {
+            ...pane,
+            tabs: [...pane.tabs, {
+              id: newTabId,
+              path: '',
+              label: 'Root',
+              searchQuery: '',
+              viewMode: 'grid'
+            }],
+            activeTabId: newTabId
+          }
+        : pane
+    ))
+  }, [activePaneId])
 
   // Navigation
   const navigateToFolder = useCallback((path: string) => {
-    setTabs(prevTabs => prevTabs.map(tab => 
-      tab.id === activeTabId
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
         ? {
-            ...tab,
-            path,
-            label: path === '' ? 'Root' : path.split('/').filter(Boolean).pop() || 'Root'
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? {
+                    ...tab,
+                    path,
+                    label: path === '' ? 'Root' : path.split('/').filter(Boolean).pop() || 'Root'
+                  }
+                : tab
+            )
           }
-        : tab
+        : pane
     ))
-  }, [activeTabId])
+  }, [activePaneId])
 
   const handleSearchChange = useCallback((query: string) => {
-    setTabs(prevTabs => prevTabs.map(tab =>
-      tab.id === activeTabId
-        ? { ...tab, searchQuery: query }
-        : tab
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
+        ? {
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? { ...tab, searchQuery: query }
+                : tab
+            )
+          }
+        : pane
     ))
-  }, [activeTabId])
+  }, [activePaneId])
 
   // File operations
   const handleDelete = async (key: string) => {
@@ -298,6 +456,21 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
   // Context value
   const contextValue = {
+    // Pane Management
+    panes,
+    activePaneId,
+    setActivePaneId,
+    addPane,
+    removePane,
+    updatePaneWidth,
+    moveTabToPane,
+    getActivePane,
+    
+    // Tab operations
+    handleTabClick,
+    handleTabClose,
+    addNewTab,
+    
     // State
     viewMode,
     setViewMode,
@@ -315,14 +488,6 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     setUploadProgress,
     isUploading,
     setIsUploading,
-    
-    // Tabs
-    tabs,
-    activeTabId,
-    activeTab,
-    handleTabClick,
-    handleTabClose,
-    addNewTab,
     
     // Navigation
     navigateToFolder,

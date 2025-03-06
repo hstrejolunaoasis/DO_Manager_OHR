@@ -11,9 +11,20 @@ interface TabBarProps {
   activeTabId: string
   onTabClick: (tabId: string) => void
   onTabClose: (tabId: string) => void
+  onDragStart: (tabId: string, fromPaneId: string) => void
+  onDragEnd: () => void
+  paneId: string
 }
 
-export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProps) {
+export function TabBar({
+  tabs,
+  activeTabId,
+  onTabClick,
+  onTabClose,
+  onDragStart,
+  onDragEnd,
+  paneId
+}: TabBarProps) {
   if (tabs.length === 0) return null
 
   return (
@@ -31,6 +42,12 @@ export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProp
                 : 'text-gray-600 hover:bg-gray-100'
               }
             `}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.effectAllowed = 'move'
+              onDragStart(tab.id, paneId)
+            }}
+            onDragEnd={onDragEnd}
           >
             <button
               className="flex items-center space-x-2 flex-1 min-w-0"
