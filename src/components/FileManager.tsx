@@ -12,6 +12,8 @@ import {
   FolderPlusIcon,
   LinkIcon,
   PlusIcon,
+  CheckCircleIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
 import useSWR from 'swr'
@@ -28,6 +30,7 @@ interface FileObject {
   LastModified: Date
   Size: number
   Type: string
+  isDirectory?: boolean
 }
 
 const fetcher = async (url: string) => {
@@ -62,6 +65,8 @@ export default function FileManager() {
   const [isUploading, setIsUploading] = useState(false)
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
   const [fileToRename, setFileToRename] = useState<FileObject | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set())
+  const [lastSelectedFile, setLastSelectedFile] = useState<string | null>(null)
   
   const [tabs, setTabs] = useState<TabState[]>([{ 
     id: 'root', 
@@ -272,39 +277,148 @@ export default function FileManager() {
     try {
       const oldKey = fileToRename.Key
       const pathParts = oldKey.split('/')
-      pathParts[pathParts.length - 1] = newName
-      const newKey = pathParts.join('/')
+      
+      // Handle folder rename
+      if (fileToRename.isDirectory) {
+        // Remove trailing slash for folders
+        pathParts.pop()
+        // Replace the last part with new name and add trailing slash
+        pathParts[pathParts.length - 1] = newName
+        const newKey = pathParts.join('/') + '/'
+        
+        const response = await fetch('/api/folders/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        })
 
-      const response = await fetch('/api/files/rename', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          oldKey,
-          newKey,
-        }),
-      })
+        if (!response.ok) throw new Error('Failed to rename folder')
+      } else {
+        // Handle file rename (existing logic)
+        pathParts[pathParts.length - 1] = newName
+        const newKey = pathParts.join('/')
+        
+        const response = await fetch('/api/files/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        })
 
-      if (!response.ok) throw new Error('Failed to rename file')
+        if (!response.ok) throw new Error('Failed to rename file')
+      }
 
-      toast.success('File renamed successfully')
+      toast.success(`${fileToRename.isDirectory ? 'Folder' : 'File'} renamed successfully`)
       mutate()
     } catch (error) {
-      toast.error('Failed to rename file')
+      toast.error(`Failed to rename ${fileToRename.isDirectory ? 'folder' : 'file'}`)
       console.error('Rename error:', error)
     }
   }
 
-  const openRenameModal = (file: FileObject) => {
-    setFileToRename(file)
+  const openRenameModal = (item: FileObject) => {
+    setFileToRename({
+      ...item,
+      isDirectory: item.Key.endsWith('/')
+    })
     setIsRenameModalOpen(true)
   }
 
+  const handleFileSelect = useCallback((key: string, event: React.MouseEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    setSelectedFiles(prev => {
+      const newSelection = new Set(prev)
+      
+      if (event.shiftKey && lastSelectedFile) {
+        // Get all files between last selected and current
+        const fileList = files?.filter(f => !f.Key.endsWith('/')) || []
+        const lastIndex = fileList.findIndex(f => f.Key === lastSelectedFile)
+        const currentIndex = fileList.findIndex(f => f.Key === key)
+        const [start, end] = [Math.min(lastIndex, currentIndex), Math.max(lastIndex, currentIndex)]
+        
+        // Toggle the selection state based on the last selected file's state
+        const isLastSelected = prev.has(lastSelectedFile)
+        fileList.slice(start, end + 1).forEach(f => {
+          if (isLastSelected) {
+            newSelection.add(f.Key)
+          } else {
+            newSelection.delete(f.Key)
+          }
+        })
+      } else {
+        // Toggle selection
+        if (newSelection.has(key)) {
+          newSelection.delete(key)
+        } else {
+          newSelection.add(key)
+        }
+      }
+      
+      return newSelection
+    })
+    
+    setLastSelectedFile(key)
+  }, [files, lastSelectedFile])
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedFiles.size} files?`)) return
+
+    try {
+      const promises = Array.from(selectedFiles).map(key =>
+        fetch('/api/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key }),
+        })
+      )
+
+      await Promise.all(promises)
+      toast.success('Files deleted successfully!')
+      setSelectedFiles(new Set())
+      mutate()
+    } catch (error) {
+      toast.error('Failed to delete some files')
+      console.error('Bulk delete error:', error)
+    }
+  }
+
+  const handleBulkDownload = async () => {
+    try {
+      const promises = Array.from(selectedFiles).map(async key => {
+        const response = await fetch(`/api/download?key=${encodeURIComponent(key)}`)
+        const data = await response.json()
+        if (data.url) {
+          window.open(data.url, '_blank')
+        }
+      })
+
+      await Promise.all(promises)
+      toast.success('Started downloading files')
+    } catch (error) {
+      toast.error('Failed to download some files')
+      console.error('Bulk download error:', error)
+    }
+  }
+
+  useEffect(() => {
+    setSelectedFiles(new Set())
+  }, [activeTabId, activeTab?.path])
+
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg shadow">
+    <div className="h-full flex flex-col bg-card dark:bg-accent rounded-lg shadow-lg dark:shadow-none">
       {/* Top Bar */}
-      <div className="p-4 border-b space-y-4">
+      <div className="p-4 border-b border-border space-y-4">
         {/* Tabs */}
         <div className="flex items-center space-x-2">
           <TabBar
@@ -315,7 +429,7 @@ export default function FileManager() {
           />
           <button
             onClick={addNewTab}
-            className="p-1 rounded-md text-gray-500 hover:bg-gray-100"
+            className="p-1 rounded-md text-text-tertiary hover:text-text-secondary hover:bg-card-hover dark:hover:bg-accent transition-colors"
             title="New tab"
           >
             <PlusIcon className="w-5 h-5" />
@@ -326,17 +440,17 @@ export default function FileManager() {
         <nav className="flex space-x-2 items-center">
           <button
             onClick={() => navigateToFolder('')}
-            className="text-blue-600 hover:underline flex items-center"
+            className="text-primary hover:text-primary-hover flex items-center"
           >
             <FolderIcon className="w-5 h-5 mr-1" />
             Root
           </button>
           {activeTab?.path.split('/').filter(Boolean).map((segment, index, array) => (
             <div key={index} className="flex items-center space-x-2">
-              <span className="text-gray-500">/</span>
+              <span className="text-text-tertiary">/</span>
               <button
                 onClick={() => navigateToFolder(array.slice(0, index + 1).join('/') + '/')}
-                className="text-blue-600 hover:underline flex items-center"
+                className="text-primary hover:text-primary-hover flex items-center"
               >
                 <FolderIcon className="w-5 h-5 mr-1" />
                 {segment}
@@ -353,9 +467,32 @@ export default function FileManager() {
               onChange={handleSearchChange}
             />
           </div>
+          
+          {selectedFiles.size > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-text-secondary">
+                {selectedFiles.size} selected
+              </span>
+              <button
+                onClick={handleBulkDownload}
+                className="inline-flex items-center px-3 py-2 border border-border bg-card dark:bg-accent shadow-sm text-sm leading-4 font-medium rounded-md text-text-primary hover:bg-card-hover dark:hover:bg-accent transition-colors"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
+                Download
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="inline-flex items-center px-3 py-2 border border-red-300 dark:border-red-700 shadow-sm text-sm leading-4 font-medium rounded-md text-red-600 dark:text-red-400 bg-card dark:bg-accent hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <TrashIcon className="h-4 w-4 mr-1" />
+                Delete
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => setIsNewFolderModalOpen(true)}
-            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-3 py-2 border border-border bg-card dark:bg-accent shadow-sm text-sm leading-4 font-medium rounded-md text-text-primary hover:bg-card-hover dark:hover:bg-accent transition-colors"
           >
             <FolderPlusIcon className="h-5 w-5 mr-1" />
             New Folder
@@ -379,11 +516,13 @@ export default function FileManager() {
         <div
           {...getRootProps()}
           className={`mb-6 p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors relative
-            ${isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
+            ${isDragActive 
+              ? 'border-primary bg-primary/5 dark:bg-primary/10' 
+              : 'border-border hover:border-primary dark:hover:border-primary'}`}
         >
           <input {...getInputProps()} />
-          <CloudArrowUpIcon className={`w-12 h-12 mx-auto ${isUploading ? 'text-blue-500 animate-bounce' : 'text-gray-400'}`} />
-          <p className="mt-2 text-sm text-gray-600">
+          <CloudArrowUpIcon className={`w-12 h-12 mx-auto ${isUploading ? 'text-primary animate-bounce' : 'text-text-tertiary'}`} />
+          <p className="mt-2 text-sm text-text-secondary">
             {isDragActive
               ? 'Drop the files here...'
               : isUploading
@@ -396,13 +535,13 @@ export default function FileManager() {
             <div className="mt-4 space-y-3 max-w-md mx-auto">
               {Object.entries(uploadProgress).map(([fileName, progress]) => (
                 <div key={fileName} className="text-left">
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div className="flex justify-between text-xs text-text-tertiary mb-1">
                     <span className="truncate">{fileName}</span>
                     <span>{Math.round(progress)}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div className="w-full bg-card-hover dark:bg-accent rounded-full h-1.5">
                     <div
-                      className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                      className="bg-primary h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
@@ -417,19 +556,33 @@ export default function FileManager() {
           {/* Directories */}
           {files && files.filter(file => file.Key.endsWith('/')).length > 0 && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-3 text-gray-700">Directories</h2>
+              <h2 className="text-lg font-semibold mb-3 text-text-primary">Directories</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {files.filter(file => file.Key.endsWith('/')).map((dir) => (
-                  <button
+                  <div
                     key={dir.Key}
-                    onClick={() => navigateToFolder(dir.Key)}
-                    className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                    className="group flex items-center justify-between p-3 rounded-lg border border-border bg-card dark:bg-accent hover:bg-card-hover dark:hover:bg-accent/80 transition-colors"
                   >
-                    <FolderIcon className="w-6 h-6 text-blue-500 mr-3" />
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {getDirectoryName(dir.Key)}
-                    </span>
-                  </button>
+                    <button
+                      onClick={() => navigateToFolder(dir.Key)}
+                      className="flex items-center flex-1"
+                    >
+                      <FolderIcon className="w-6 h-6 text-primary mr-3" />
+                      <span className="text-sm font-medium text-text-primary truncate">
+                        {getDirectoryName(dir.Key)}
+                      </span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openRenameModal(dir)
+                      }}
+                      className="p-2 text-text-tertiary hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Rename folder"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
@@ -438,7 +591,7 @@ export default function FileManager() {
           {/* Files */}
           {files && files.filter(file => !file.Key.endsWith('/')).length > 0 ? (
             <div>
-              <h2 className="text-lg font-semibold mb-3 text-gray-700">Files</h2>
+              <h2 className="text-lg font-semibold mb-3 text-text-primary">Files</h2>
               <div className={viewMode === 'grid' 
                 ? "grid gap-4"
                 : "space-y-2"
@@ -450,13 +603,29 @@ export default function FileManager() {
                 {files.filter(file => !file.Key.endsWith('/')).map((file) => (
                   <div
                     key={file.Key}
-                    className={`group ${
+                    className={`group relative ${
                       viewMode === 'grid'
-                        ? 'p-4 border rounded-lg hover:shadow-md transition-shadow'
-                        : 'flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border'
-                    }`}
+                        ? 'p-4 border border-border bg-card dark:bg-accent rounded-lg hover:shadow-md dark:hover:shadow-lg dark:hover:shadow-black/10 transition-all'
+                        : 'flex items-center justify-between p-3 hover:bg-card-hover dark:hover:bg-accent/80 rounded-lg border border-border'
+                    } ${selectedFiles.has(file.Key) ? 'ring-2 ring-primary' : ''}`}
                     style={viewMode === 'grid' ? { minHeight: `${gridSize}px` } : undefined}
                   >
+                    <div 
+                      className={`absolute ${viewMode === 'grid' ? 'top-2 right-2' : 'left-2'} z-10`}
+                      onClick={(e) => handleFileSelect(file.Key, e)}
+                    >
+                      <div 
+                        className={`w-5 h-5 rounded border ${
+                          selectedFiles.has(file.Key)
+                            ? 'bg-primary border-primary'
+                            : 'border-border bg-white dark:bg-accent'
+                        } flex items-center justify-center cursor-pointer hover:border-primary transition-colors`}
+                      >
+                        {selectedFiles.has(file.Key) && (
+                          <CheckIcon className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                    </div>
                     {viewMode === 'grid' ? (
                       <div>
                         <FilePreview
@@ -465,7 +634,7 @@ export default function FileManager() {
                           url={`/api/files/preview?key=${encodeURIComponent(file.Key)}`}
                         />
                         <div className="mt-2 flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-text-tertiary">
                             {formatSize(file.Size)}
                           </span>
                           <div className="flex space-x-2">
@@ -474,7 +643,7 @@ export default function FileManager() {
                                 e.stopPropagation()
                                 handleCopyUrl(file.Key)
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-1 text-text-tertiary hover:text-primary"
                               title="Copy CDN URL"
                             >
                               <LinkIcon className="w-4 h-4" />
@@ -484,20 +653,20 @@ export default function FileManager() {
                                 e.stopPropagation()
                                 openRenameModal(file)
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-1 text-text-tertiary hover:text-primary"
                               title="Rename file"
                             >
                               <PencilIcon className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDownload(file.Key)}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-1 text-text-tertiary hover:text-primary"
                             >
                               <ArrowDownTrayIcon className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDelete(file.Key)}
-                              className="p-1 text-gray-400 hover:text-red-500"
+                              className="p-1 text-text-tertiary hover:text-red-500"
                             >
                               <TrashIcon className="w-4 h-4" />
                             </button>
@@ -519,12 +688,12 @@ export default function FileManager() {
                                 e.stopPropagation()
                                 handleCopyUrl(file.Key)
                               }}
-                              className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                              className="text-sm font-medium text-text-primary hover:text-primary"
                               title="Copy CDN URL"
                             >
                               {file.Key.split('/').pop()}
                             </button>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-text-tertiary">
                               {formatSize(file.Size)} • {new Date(file.LastModified).toLocaleDateString()}
                             </p>
                           </div>
@@ -535,7 +704,7 @@ export default function FileManager() {
                               e.stopPropagation()
                               handleCopyUrl(file.Key)
                             }}
-                            className="p-2 text-gray-400 hover:text-blue-500"
+                            className="p-2 text-text-tertiary hover:text-primary"
                             title="Copy CDN URL"
                           >
                             <LinkIcon className="w-5 h-5" />
@@ -545,20 +714,20 @@ export default function FileManager() {
                               e.stopPropagation()
                               openRenameModal(file)
                             }}
-                            className="p-2 text-gray-400 hover:text-blue-500"
+                            className="p-2 text-text-tertiary hover:text-primary"
                             title="Rename file"
                           >
                             <PencilIcon className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleDownload(file.Key)}
-                            className="p-2 text-gray-400 hover:text-blue-500"
+                            className="p-2 text-text-tertiary hover:text-primary"
                           >
                             <ArrowDownTrayIcon className="w-5 h-5" />
                           </button>
                           <button
                             onClick={() => handleDelete(file.Key)}
-                            className="p-2 text-gray-400 hover:text-red-500"
+                            className="p-2 text-text-tertiary hover:text-red-500"
                           >
                             <TrashIcon className="w-5 h-5" />
                           </button>
@@ -570,7 +739,7 @@ export default function FileManager() {
               </div>
             </div>
           ) : (
-            <div className="text-center text-gray-500 py-4">
+            <div className="text-center text-text-tertiary py-4">
               {activeTab?.searchQuery ? 'No files match your search' : 'No files in this directory'}
             </div>
           )}

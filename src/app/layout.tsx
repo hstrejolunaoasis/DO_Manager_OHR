@@ -16,8 +16,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${inter.className} h-full bg-gray-50`}>
-        <Toaster position="top-right" />
+      <body className={`${inter.className} h-full dark:bg-background dark:text-foreground`}>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: 'var(--card)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            },
+          }}
+        />
         <main className="h-full">
           {children}
         </main>

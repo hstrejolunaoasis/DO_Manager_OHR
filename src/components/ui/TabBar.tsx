@@ -1,23 +1,20 @@
-import { XMarkIcon, FolderIcon } from '@heroicons/react/24/outline'
-
-export interface Tab {
-  id: string
-  path: string
-  label: string
-}
+import { FolderIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface TabBarProps {
-  tabs: Tab[]
-  activeTabId: string
-  onTabClick: (tabId: string) => void
-  onTabClose: (tabId: string) => void
+  tabs: Array<{
+    id: string
+    label: string
+  }>
+  activeTabId: string | null
+  onTabClick: (id: string) => void
+  onTabClose: (id: string) => void
 }
 
 export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProps) {
   if (tabs.length === 0) return null
 
   return (
-    <div className="flex space-x-1 overflow-x-auto bg-gray-50 border-b px-2 py-2">
+    <div className="flex space-x-1 overflow-x-auto bg-card dark:bg-accent border-b border-border px-2 py-2">
       {tabs.map((tab) => {
         const isActive = tab.id === activeTabId
         return (
@@ -27,8 +24,8 @@ export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProp
               group flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium
               cursor-pointer transition-colors min-w-[120px] max-w-[200px]
               ${isActive 
-                ? 'bg-white text-blue-600 shadow-sm border border-gray-200' 
-                : 'text-gray-600 hover:bg-gray-100'
+                ? 'bg-white dark:bg-card text-primary shadow-sm border border-border' 
+                : 'text-text-secondary hover:bg-card-hover dark:hover:bg-accent'
               }
             `}
           >
@@ -47,8 +44,8 @@ export function TabBar({ tabs, activeTabId, onTabClick, onTabClose }: TabBarProp
               className={`
                 flex-shrink-0 p-0.5 rounded-full
                 ${isActive 
-                  ? 'text-blue-400 hover:text-blue-600' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  ? 'text-primary hover:text-primary-hover' 
+                  : 'text-text-tertiary hover:text-text-secondary'
                 }
               `}
             >

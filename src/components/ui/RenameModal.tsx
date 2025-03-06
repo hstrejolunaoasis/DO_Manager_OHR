@@ -44,7 +44,7 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
+          <div className="fixed inset-0 bg-black/25 dark:bg-black/40" />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -58,19 +58,19 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-card dark:bg-accent p-6 text-left align-middle shadow-xl transition-all">
                 <Dialog.Title
                   as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 flex items-center"
+                  className="text-lg font-medium leading-6 text-text-primary flex items-center"
                 >
-                  <PencilIcon className="h-6 w-6 mr-2 text-blue-500" />
+                  <PencilIcon className="h-6 w-6 mr-2 text-primary" />
                   Rename File
                 </Dialog.Title>
 
                 <form onSubmit={handleSubmit} className="mt-4">
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="newName" className="block text-sm font-medium text-gray-700">
+                      <label htmlFor="newName" className="block text-sm font-medium text-text-primary">
                         New Name
                       </label>
                       <input
@@ -79,7 +79,7 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
                         name="newName"
                         value={newName}
                         onChange={(e) => setNewName(e.target.value)}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                        className="mt-1 block w-full rounded-md border-border bg-card dark:bg-accent/50 shadow-sm text-text-primary placeholder-text-tertiary focus:border-primary focus:ring-primary sm:text-sm transition-colors"
                         placeholder="Enter new name"
                         autoComplete="off"
                         required
@@ -91,14 +91,14 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
                     <button
                       type="button"
                       onClick={onClose}
-                      className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                      className="inline-flex justify-center rounded-md border border-border bg-card dark:bg-accent px-4 py-2 text-sm font-medium text-text-primary hover:bg-card-hover dark:hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-accent"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={isSubmitting || !newName.trim() || newName.trim() === currentName}
-                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-blue-400"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-accent disabled:bg-primary/70"
                     >
                       {isSubmitting ? 'Renaming...' : 'Rename'}
                     </button>
