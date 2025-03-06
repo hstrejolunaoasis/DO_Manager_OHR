@@ -183,7 +183,10 @@ export const TreeView: React.FC<TreeViewProps> = ({
   onCopyUrl,
   onRename
 }) => {
-  const rootItems = files.filter(file => {
+  // First, deduplicate the files array based on Key
+  const uniqueFiles = Array.from(new Map(files.map(file => [file.Key, file])).values());
+  
+  const rootItems = uniqueFiles.filter(file => {
     if (!currentPath) {
       const segments = file.Key.split('/').filter(Boolean)
       return segments.length === 1 || (segments.length === 0 && file.Key === '')
@@ -192,8 +195,11 @@ export const TreeView: React.FC<TreeViewProps> = ({
     const relativePath = file.Key.slice(currentPath.length)
     const segments = relativePath.split('/').filter(Boolean)
     
-    return file.Key === currentPath || 
-           (file.Key.startsWith(currentPath) && (segments.length === 1 || (segments.length === 1 && file.Key.endsWith('/'))))
+    // Only include direct children of current path and exclude the path itself if it's duplicated
+    return (file.Key.startsWith(currentPath) && 
+            segments.length === 1) || 
+           (file.Key === currentPath && 
+            !uniqueFiles.some(f => f.Key !== currentPath && f.Key.startsWith(currentPath) && f.Key.endsWith(currentPath)))
   })
 
   return (
@@ -202,7 +208,7 @@ export const TreeView: React.FC<TreeViewProps> = ({
         <TreeItem
           key={item.Key}
           item={item}
-          files={files}
+          files={uniqueFiles}
           level={0}
           currentPath={currentPath}
           onNavigate={onNavigate}
