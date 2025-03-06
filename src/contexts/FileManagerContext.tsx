@@ -109,7 +109,11 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
   // Data fetching
   const { data: files, error, mutate } = useSWR<FileObject[]>(
-    `/api/files${activeTab?.path ? `?prefix=${activeTab.path}` : ''}${activeTab?.searchQuery ? `&search=${encodeURIComponent(activeTab.searchQuery)}` : ''}`,
+    `/api/files?${new URLSearchParams({
+      ...(activeTab?.path ? { prefix: activeTab.path } : {}),
+      ...(activeTab?.searchQuery ? { search: activeTab.searchQuery } : {}),
+      viewMode
+    }).toString()}`,
     fetcher
   )
 

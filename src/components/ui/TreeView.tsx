@@ -42,7 +42,8 @@ const TreeItem: React.FC<TreeItemProps> = ({
     if (file.Key === item.Key) return false
     if (!file.Key.startsWith(item.Key)) return false
     const relativePath = file.Key.slice(item.Key.length)
-    return !relativePath.includes('/') || (file.Key.endsWith('/') && relativePath.split('/').length === 2)
+    const segments = relativePath.split('/').filter(Boolean)
+    return segments.length === 1 || (segments.length === 1 && file.Key.endsWith('/'))
   }) : []
 
   const handleToggle = (e: React.MouseEvent) => {
@@ -50,8 +51,8 @@ const TreeItem: React.FC<TreeItemProps> = ({
     setIsExpanded(!isExpanded)
   }
 
-  const handleItemClick = () => {
-    if (isFolder) {
+  const handleItemClick = (e: React.MouseEvent) => {
+    if (isFolder && !e.defaultPrevented) {
       onNavigate(item.Key)
     }
   }
@@ -138,7 +139,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
         {!isFolder && <FileActions />}
       </div>
 
-      {isFolder && isExpanded && childItems.length > 0 && (
+      {isFolder && isExpanded && (
         <div className="ml-4">
           {childItems.map((child) => (
             <TreeItem

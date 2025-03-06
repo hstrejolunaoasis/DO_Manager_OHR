@@ -7,7 +7,7 @@ import { Modals } from './fileManager/Modals'
 export default function FileManager() {
   return (
     <FileManagerProvider>
-      <div className="h-full flex flex-col bg-white rounded-lg shadow">
+      <div className="h-full flex flex-col bg-white rounded-lg shadow ">
         <TopBar />
         <FileContent />
         <Modals />
