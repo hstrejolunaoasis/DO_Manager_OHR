@@ -374,11 +374,11 @@ export default function FileManager() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Upload area */}
         <div
           {...getRootProps()}
-          className={`mb-6 p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors relative
+          className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors
             ${isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}`}
         >
           <input {...getInputProps()} />
@@ -413,167 +413,169 @@ export default function FileManager() {
         </div>
 
         {/* File List */}
-        <div className="flex-1 overflow-auto p-4">
-          {/* Directories */}
-          {files && files.filter(file => file.Key.endsWith('/')).length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-3 text-gray-700">Directories</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {files.filter(file => file.Key.endsWith('/')).map((dir) => (
-                  <button
-                    key={dir.Key}
-                    onClick={() => navigateToFolder(dir.Key)}
-                    className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
-                  >
-                    <FolderIcon className="w-6 h-6 text-blue-500 mr-3" />
-                    <span className="text-sm font-medium text-gray-900 truncate">
-                      {getDirectoryName(dir.Key)}
-                    </span>
-                  </button>
-                ))}
+        <div className="flex-1 overflow-y-auto mt-6">
+          <div className="px-4">
+            {/* Directories */}
+            {files && files.filter(file => file.Key.endsWith('/')).length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold mb-3 text-gray-700">Directories</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {files.filter(file => file.Key.endsWith('/')).map((dir) => (
+                    <button
+                      key={dir.Key}
+                      onClick={() => navigateToFolder(dir.Key)}
+                      className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
+                    >
+                      <FolderIcon className="w-6 h-6 text-blue-500 mr-3" />
+                      <span className="text-sm font-medium text-gray-900 truncate">
+                        {getDirectoryName(dir.Key)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Files */}
-          {files && files.filter(file => !file.Key.endsWith('/')).length > 0 ? (
-            <div>
-              <h2 className="text-lg font-semibold mb-3 text-gray-700">Files</h2>
-              <div className={viewMode === 'grid' 
-                ? "grid gap-4"
-                : "space-y-2"
-              }
-              style={{
-                gridTemplateColumns: viewMode === 'grid' ? `repeat(auto-fill, minmax(${gridSize}px, 1fr))` : '',
-              }}
-              >
-                {files.filter(file => !file.Key.endsWith('/')).map((file) => (
-                  <div
-                    key={file.Key}
-                    className={`group ${
-                      viewMode === 'grid'
-                        ? 'p-4 border rounded-lg hover:shadow-md transition-shadow'
-                        : 'flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border'
-                    }`}
-                    style={viewMode === 'grid' ? { minHeight: `${gridSize}px` } : undefined}
-                  >
-                    {viewMode === 'grid' ? (
-                      <div>
-                        <FilePreview
-                          filename={file.Key.split('/').pop() || ''}
-                          size={file.Size}
-                          url={`/api/files/preview?key=${encodeURIComponent(file.Key)}`}
-                        />
-                        <div className="mt-2 flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
-                            {formatSize(file.Size)}
-                          </span>
-                          <div className="flex space-x-2">
+            {/* Files */}
+            {files && files.filter(file => !file.Key.endsWith('/')).length > 0 ? (
+              <div>
+                <h2 className="text-lg font-semibold mb-3 text-gray-700">Files</h2>
+                <div className={viewMode === 'grid' 
+                  ? "grid gap-4"
+                  : "space-y-2"
+                }
+                style={{
+                  gridTemplateColumns: viewMode === 'grid' ? `repeat(auto-fill, minmax(${gridSize}px, 1fr))` : '',
+                }}
+                >
+                  {files.filter(file => !file.Key.endsWith('/')).map((file) => (
+                    <div
+                      key={file.Key}
+                      className={`group ${
+                        viewMode === 'grid'
+                          ? 'p-4 border rounded-lg hover:shadow-md transition-shadow'
+                          : 'flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg border'
+                      }`}
+                      style={viewMode === 'grid' ? { minHeight: `${gridSize}px` } : undefined}
+                    >
+                      {viewMode === 'grid' ? (
+                        <div>
+                          <FilePreview
+                            filename={file.Key.split('/').pop() || ''}
+                            size={file.Size}
+                            url={`/api/files/preview?key=${encodeURIComponent(file.Key)}`}
+                          />
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs text-gray-500">
+                              {formatSize(file.Size)}
+                            </span>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCopyUrl(file.Key)
+                                }}
+                                className="p-1 text-gray-400 hover:text-blue-500"
+                                title="Copy CDN URL"
+                              >
+                                <LinkIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  openRenameModal(file)
+                                }}
+                                className="p-1 text-gray-400 hover:text-blue-500"
+                                title="Rename file"
+                              >
+                                <PencilIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDownload(file.Key)}
+                                className="p-1 text-gray-400 hover:text-blue-500"
+                              >
+                                <ArrowDownTrayIcon className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(file.Key)}
+                                className="p-1 text-gray-400 hover:text-red-500"
+                              >
+                                <TrashIcon className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-3">
+                            <FilePreview
+                              filename={file.Key.split('/').pop() || ''}
+                              size={file.Size}
+                              mode="list"
+                              url={`/api/files/preview?key=${encodeURIComponent(file.Key)}`}
+                            />
+                            <div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCopyUrl(file.Key)
+                                }}
+                                className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                                title="Copy CDN URL"
+                              >
+                                {file.Key.split('/').pop()}
+                              </button>
+                              <p className="text-xs text-gray-500">
+                                {formatSize(file.Size)} • {new Date(file.LastModified).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleCopyUrl(file.Key)
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-2 text-gray-400 hover:text-blue-500"
                               title="Copy CDN URL"
                             >
-                              <LinkIcon className="w-4 h-4" />
+                              <LinkIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 openRenameModal(file)
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-2 text-gray-400 hover:text-blue-500"
                               title="Rename file"
                             >
-                              <PencilIcon className="w-4 h-4" />
+                              <PencilIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleDownload(file.Key)}
-                              className="p-1 text-gray-400 hover:text-blue-500"
+                              className="p-2 text-gray-400 hover:text-blue-500"
                             >
-                              <ArrowDownTrayIcon className="w-4 h-4" />
+                              <ArrowDownTrayIcon className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleDelete(file.Key)}
-                              className="p-1 text-gray-400 hover:text-red-500"
+                              className="p-2 text-gray-400 hover:text-red-500"
                             >
-                              <TrashIcon className="w-4 h-4" />
+                              <TrashIcon className="w-5 h-5" />
                             </button>
                           </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="flex items-center space-x-3">
-                          <FilePreview
-                            filename={file.Key.split('/').pop() || ''}
-                            size={file.Size}
-                            mode="list"
-                            url={`/api/files/preview?key=${encodeURIComponent(file.Key)}`}
-                          />
-                          <div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleCopyUrl(file.Key)
-                              }}
-                              className="text-sm font-medium text-gray-900 hover:text-blue-600"
-                              title="Copy CDN URL"
-                            >
-                              {file.Key.split('/').pop()}
-                            </button>
-                            <p className="text-xs text-gray-500">
-                              {formatSize(file.Size)} • {new Date(file.LastModified).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleCopyUrl(file.Key)
-                            }}
-                            className="p-2 text-gray-400 hover:text-blue-500"
-                            title="Copy CDN URL"
-                          >
-                            <LinkIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openRenameModal(file)
-                            }}
-                            className="p-2 text-gray-400 hover:text-blue-500"
-                            title="Rename file"
-                          >
-                            <PencilIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDownload(file.Key)}
-                            className="p-2 text-gray-400 hover:text-blue-500"
-                          >
-                            <ArrowDownTrayIcon className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(file.Key)}
-                            className="p-2 text-gray-400 hover:text-red-500"
-                          >
-                            <TrashIcon className="w-5 h-5" />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-4">
-              {activeTab?.searchQuery ? 'No files match your search' : 'No files in this directory'}
-            </div>
-          )}
+            ) : (
+              <div className="text-center text-gray-500 py-4">
+                {activeTab?.searchQuery ? 'No files match your search' : 'No files in this directory'}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
