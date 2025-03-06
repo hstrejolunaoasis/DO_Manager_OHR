@@ -103,7 +103,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
   )
 
   return (
-    <div className="select-none">
+    <div className="select-none text-gray-800">
       <div
         className={`group flex items-center py-1 px-2 rounded-md cursor-pointer hover:bg-gray-50 ${
           isCurrentItem ? 'bg-blue-50' : ''

@@ -15,6 +15,7 @@ export interface TabState {
   path: string
   label: string
   searchQuery: string
+  viewMode: 'grid' | 'list' | 'tree'
 }
 
 // Context type
@@ -83,7 +84,6 @@ const FileManagerContext = createContext<FileManagerContextType | undefined>(und
 // Provider component
 export function FileManagerProvider({ children }: { children: ReactNode }) {
   // View state
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'tree'>('grid')
   const [gridSize, setGridSize] = useState(200)
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   
@@ -101,11 +101,22 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     id: 'root', 
     path: '', 
     label: 'Root',
-    searchQuery: ''
+    searchQuery: '',
+    viewMode: 'grid'
   }])
   const [activeTabId, setActiveTabId] = useState('root')
 
   const activeTab = useMemo(() => tabs.find(t => t.id === activeTabId), [tabs, activeTabId])
+
+  // View mode getter and setter
+  const viewMode = activeTab?.viewMode || 'grid'
+  const setViewMode = useCallback((mode: 'grid' | 'list' | 'tree') => {
+    setTabs(prevTabs => prevTabs.map(tab =>
+      tab.id === activeTabId
+        ? { ...tab, viewMode: mode }
+        : tab
+    ))
+  }, [activeTabId])
 
   // Data fetching
   const { data: files, error, mutate } = useSWR<FileObject[]>(
@@ -141,7 +152,8 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
       id: newTabId, 
       path: '', 
       label: 'Root',
-      searchQuery: ''
+      searchQuery: '',
+      viewMode: 'grid'
     }
     setTabs(prev => [...prev, newTab])
     setActiveTabId(newTabId)
