@@ -4,6 +4,7 @@ import { SearchBar } from '../ui/SearchBar'
 import { ViewSelector } from '../ui/ViewSelector'
 import { GridSizeControl } from '../ui/GridSizeControl'
 import { TabBar } from '../ui/TabBar'
+import { Tooltip } from '../ui/Tooltip'
 
 interface TopBarProps {
   paneId: string
@@ -55,21 +56,23 @@ export function TopBar({
           onDragEnd={onTabDragEnd}
           paneId={paneId}
         />
-        <button
-          onClick={addNewTab}
-          className="p-1 rounded-md text-gray-500 hover:bg-gray-100"
-          title="New tab"
-        >
-          <PlusIcon className="w-5 h-5" />
-        </button>
-        {canClose && (
+        <Tooltip content="Open new tab" position="bottom">
           <button
-            onClick={onClose}
-            className="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-500"
-            title="Close pane"
+            onClick={addNewTab}
+            className="p-1 rounded-md text-gray-500 hover:bg-gray-100"
           >
-            <XMarkIcon className="w-5 h-5" />
+            <PlusIcon className="w-5 h-5" />
           </button>
+        </Tooltip>
+        {canClose && (
+          <Tooltip content="Close pane" position="bottom">
+            <button
+              onClick={onClose}
+              className="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-red-500"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+          </Tooltip>
         )}
       </div>
 
