@@ -39,8 +39,10 @@ export function FileContent({ paneId }: FileContentProps) {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Only show upload area in active pane */}
-      {isActivePane && <UploadArea />}
+      {/* Show upload area in all panes, but only make it active in the focused pane */}
+      <div className={`transition-opacity duration-200 ${!isActivePane ? 'opacity-50 pointer-events-none' : ''}`}>
+        <UploadArea />
+      </div>
 
       {/* File List */}
       <div className="flex-1 overflow-y-auto mt-6">

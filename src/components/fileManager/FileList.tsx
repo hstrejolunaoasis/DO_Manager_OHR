@@ -4,9 +4,10 @@ import { FileObject } from '../../contexts/FileManagerContext'
 
 interface FileListProps {
   files: FileObject[]
+  paneId: string
 }
 
-export function FileList({ files }: FileListProps) {
+export function FileList({ files, paneId }: FileListProps) {
   const { viewMode, gridSize, activeTab } = useFileManager()
 
   if (files.length === 0) {
@@ -33,7 +34,7 @@ export function FileList({ files }: FileListProps) {
           <FileItem 
             key={file.Key} 
             file={file} 
-            viewMode={viewMode} 
+            viewMode={viewMode}
           />
         ))}
       </div>
