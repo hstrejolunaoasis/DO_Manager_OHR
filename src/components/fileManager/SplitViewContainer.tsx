@@ -123,7 +123,7 @@ export function SplitViewContainer() {
   return (
     <div
       ref={containerRef}
-      className="h-full flex"
+      className="h-full flex min-h-0"
       onMouseMove={handleMouseMove as any}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
@@ -131,7 +131,7 @@ export function SplitViewContainer() {
       {panes.map((pane, index) => (
         <React.Fragment key={pane.id}>
           <div
-            className={`flex-1 flex flex-col ${
+            className={`flex-1 flex flex-col min-h-0 ${
               dragState.dropPreviewPaneId === pane.id
                 ? 'relative'
                 : ''
@@ -157,7 +157,7 @@ export function SplitViewContainer() {
             )}
 
             {/* Pane content */}
-            <div className={`flex-1 flex flex-col ${
+            <div className={`flex-1 flex flex-col min-h-0 ${
               activePaneId === pane.id ? 'ring-2 ring-blue-500' : ''
             }`}>
               <TopBar
