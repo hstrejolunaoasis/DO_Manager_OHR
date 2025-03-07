@@ -5,13 +5,21 @@ import { useFileManager } from '../contexts/FileManagerContext'
 
 export function useFileUpload() {
   const {
-    activeTab,
+    getActivePane,
     setIsUploading,
     setUploadProgress,
     mutate
   } = useFileManager()
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const activePane = getActivePane()
+    const activeTab = activePane?.tabs.find(t => t.id === activePane.activeTabId)
+    
+    if (!activePane || !activeTab) {
+      toast.error('No active pane to upload files to')
+      return
+    }
+
     try {
       setIsUploading(true)
       // Initialize progress for each file
@@ -25,7 +33,7 @@ export function useFileUpload() {
       acceptedFiles.forEach(file => {
         formData.append('files', file)
       })
-      formData.append('path', activeTab?.path || '')
+      formData.append('path', activeTab.path || '')
 
       // Use XMLHttpRequest for upload progress
       const response = await new Promise((resolve, reject) => {
@@ -67,7 +75,7 @@ export function useFileUpload() {
     } finally {
       setIsUploading(false)
     }
-  }, [activeTab?.path, mutate, setIsUploading, setUploadProgress])
+  }, [getActivePane, mutate, setIsUploading, setUploadProgress])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 
