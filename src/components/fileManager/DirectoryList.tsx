@@ -4,9 +4,10 @@ import { FileObject } from '../../contexts/FileManagerContext'
 
 interface DirectoryListProps {
   directories: FileObject[]
+  paneId: string
 }
 
-export function DirectoryList({ directories }: DirectoryListProps) {
+export function DirectoryList({ directories, paneId }: DirectoryListProps) {
   const { navigateToFolder, getDirectoryName } = useFileManager()
 
   if (directories.length === 0) {
@@ -20,7 +21,7 @@ export function DirectoryList({ directories }: DirectoryListProps) {
         {directories.map((dir) => (
           <button
             key={dir.Key}
-            onClick={() => navigateToFolder(dir.Key)}
+            onClick={() => navigateToFolder(dir.Key, paneId)}
             className="flex items-center p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-200 transition-colors"
           >
             <FolderIcon className="w-6 h-6 text-blue-500 mr-3" />

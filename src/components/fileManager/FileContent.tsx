@@ -10,7 +10,7 @@ interface FileContentProps {
 
 export function FileContent({ paneId }: FileContentProps) {
   const { 
-    files, 
+    getFilesForPane,
     panes,
     activePaneId,
     navigateToFolder, 
@@ -25,6 +25,7 @@ export function FileContent({ paneId }: FileContentProps) {
 
   const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
   const isActivePane = paneId === activePaneId
+  const files = getFilesForPane(paneId)
 
   if (!files) {
     return (
@@ -47,7 +48,7 @@ export function FileContent({ paneId }: FileContentProps) {
           <TreeView
             files={files}
             currentPath={activeTab?.path || ''}
-            onNavigate={navigateToFolder}
+            onNavigate={(path) => navigateToFolder(path, paneId)}
             onDelete={handleDelete}
             onDownload={handleDownload}
             onCopyUrl={handleCopyUrl}
@@ -57,12 +58,14 @@ export function FileContent({ paneId }: FileContentProps) {
           <div className="px-4">
             {/* Directories */}
             <DirectoryList 
-              directories={files.filter(file => file.Key.endsWith('/'))} 
+              directories={files.filter(file => file.Key.endsWith('/'))}
+              paneId={paneId}
             />
 
             {/* Files */}
             <FileList 
-              files={files.filter(file => !file.Key.endsWith('/'))} 
+              files={files.filter(file => !file.Key.endsWith('/'))}
+              paneId={paneId}
             />
           </div>
         )}

@@ -5,8 +5,8 @@ import { Toaster } from 'react-hot-toast'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Digital Ocean Assets Manager',
-  description: 'Manage your Digital Ocean Space assets efficiently',
+  title: 'S3 Navigator',
+  description: 'Manage your S3 Assets efficiently',
 }
 
 export default function RootLayout({

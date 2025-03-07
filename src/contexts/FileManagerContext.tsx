@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useMemo, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useMemo, useCallback, ReactNode, useEffect } from 'react'
 import useSWR from 'swr'
 import toast from 'react-hot-toast'
 
@@ -61,13 +61,13 @@ interface FileManagerContextType {
   setIsUploading: (isUploading: boolean) => void
   
   // Navigation
-  navigateToFolder: (path: string) => void
-  handleSearchChange: (query: string) => void
+  navigateToFolder: (path: string, paneId: string) => void
+  handleSearchChange: (query: string, paneId: string) => void
   
   // Files data
-  files: FileObject[] | undefined
+  getFilesForPane: (paneId: string) => FileObject[] | undefined
   error: any
-  mutate: () => Promise<FileObject[] | undefined>
+  mutate: () => Promise<void>
   
   // File operations
   handleDelete: (key: string) => Promise<void>
@@ -125,6 +125,10 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [isUploading, setIsUploading] = useState(false)
 
+  // Files data per pane
+  const [filesPerPane, setFilesPerPane] = useState<{ [paneId: string]: FileObject[] }>({})
+  const [loadingPanes, setLoadingPanes] = useState<Set<string>>(new Set())
+
   // Get active pane and tab
   const getActivePane = useCallback(() => {
     return panes.find(p => p.id === activePaneId) || panes[0]
@@ -152,15 +156,47 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     ))
   }, [activePaneId])
 
-  // Data fetching
-  const { data: files, error, mutate } = useSWR<FileObject[]>(
-    `/api/files?${new URLSearchParams({
-      ...(activeTab?.path ? { prefix: activeTab.path } : {}),
-      ...(activeTab?.searchQuery ? { search: activeTab.searchQuery } : {}),
-      viewMode
-    }).toString()}`,
-    fetcher
-  )
+  // Get files for a specific pane
+  const getFilesForPane = useCallback((paneId: string) => {
+    return filesPerPane[paneId]
+  }, [filesPerPane])
+
+  // Fetch files for a specific pane
+  const fetchFilesForPane = useCallback(async (paneId: string) => {
+    const pane = panes.find(p => p.id === paneId)
+    if (!pane) return
+
+    const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
+    if (!activeTab) return
+
+    setLoadingPanes(prev => new Set([...prev, paneId]))
+
+    try {
+      const response = await fetch(`/api/files?${new URLSearchParams({
+        ...(activeTab.path ? { prefix: activeTab.path } : {}),
+        ...(activeTab.searchQuery ? { search: activeTab.searchQuery } : {}),
+        viewMode: activeTab.viewMode
+      }).toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch files')
+      }
+
+      const data = await response.json()
+      setFilesPerPane(prev => ({
+        ...prev,
+        [paneId]: data
+      }))
+    } catch (error) {
+      console.error('Error fetching files:', error)
+    } finally {
+      setLoadingPanes(prev => {
+        const next = new Set(prev)
+        next.delete(paneId)
+        return next
+      })
+    }
+  }, [panes])
 
   // Pane operations
   const addPane = useCallback(() => {
@@ -304,9 +340,9 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   }, [activePaneId])
 
   // Navigation
-  const navigateToFolder = useCallback((path: string) => {
+  const navigateToFolder = useCallback((path: string, paneId: string) => {
     setPanes(prevPanes => prevPanes.map(pane =>
-      pane.id === activePaneId
+      pane.id === paneId
         ? {
             ...pane,
             tabs: pane.tabs.map(tab =>
@@ -321,11 +357,14 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
           }
         : pane
     ))
-  }, [activePaneId])
+    
+    // Fetch new files for this pane
+    fetchFilesForPane(paneId)
+  }, [fetchFilesForPane])
 
-  const handleSearchChange = useCallback((query: string) => {
+  const handleSearchChange = useCallback((query: string, paneId: string) => {
     setPanes(prevPanes => prevPanes.map(pane =>
-      pane.id === activePaneId
+      pane.id === paneId
         ? {
             ...pane,
             tabs: pane.tabs.map(tab =>
@@ -336,7 +375,32 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
           }
         : pane
     ))
-  }, [activePaneId])
+    
+    // Fetch new files for this pane
+    fetchFilesForPane(paneId)
+  }, [fetchFilesForPane])
+
+  // Effect to fetch initial files for each pane
+  useEffect(() => {
+    panes.forEach(pane => {
+      fetchFilesForPane(pane.id)
+    })
+  }, []) // Only run on mount
+
+  // Effect to fetch files when active tab changes
+  useEffect(() => {
+    panes.forEach(pane => {
+      const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
+      if (activeTab) {
+        fetchFilesForPane(pane.id)
+      }
+    })
+  }, [panes, fetchFilesForPane])
+
+  // Update mutate to refresh all panes
+  const mutate = useCallback(async () => {
+    await Promise.all(panes.map(pane => fetchFilesForPane(pane.id)))
+  }, [panes, fetchFilesForPane])
 
   // File operations
   const handleDelete = async (key: string) => {
@@ -494,8 +558,8 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     handleSearchChange,
     
     // Files data
-    files,
-    error,
+    getFilesForPane,
+    error: null, // We're handling errors per-pane now
     mutate,
     
     // File operations
