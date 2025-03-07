@@ -9,7 +9,7 @@ interface ViewSelectorProps {
 export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
   return (
     <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
-      <Tooltip content="Display files as a grid of thumbnails with previews">
+      <Tooltip content="Grid with thumbnails">
         <button
           onClick={() => onViewChange('grid')}
           className={`p-2 rounded-md ${
@@ -17,11 +17,12 @@ export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
           }`}
+          aria-label="Grid view"
         >
           <Squares2X2Icon className="w-5 h-5" />
         </button>
       </Tooltip>
-      <Tooltip content="Show files in a detailed list with additional information">
+      <Tooltip content="Detailed list">
         <button
           onClick={() => onViewChange('list')}
           className={`p-2 rounded-md ${
@@ -29,11 +30,12 @@ export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
           }`}
+          aria-label="List view"
         >
           <ListBulletIcon className="w-5 h-5" />
         </button>
       </Tooltip>
-      <Tooltip content="Browse files and folders in a hierarchical structure">
+      <Tooltip content="Folder tree">
         <button
           onClick={() => onViewChange('tree')}
           className={`p-2 rounded-md ${
@@ -41,6 +43,7 @@ export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
               ? 'bg-white text-blue-600 shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
           }`}
+          aria-label="Tree view"
         >
           <ViewColumnsIcon className="w-5 h-5" />
         </button>
