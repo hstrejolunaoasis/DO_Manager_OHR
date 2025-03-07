@@ -2,9 +2,16 @@ import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
 import { useFileManager } from '../../contexts/FileManagerContext'
 import { useFileUpload } from '../../hooks/useFileUpload'
 
-export function UploadArea() {
-  const { isUploading, uploadProgress } = useFileManager()
+interface UploadAreaProps {
+  paneId: string
+}
+
+export function UploadArea({ paneId }: UploadAreaProps) {
+  const { isUploading, uploadProgress, activePaneId } = useFileManager()
   const { getRootProps, getInputProps, isDragActive } = useFileUpload()
+  
+  const isActivePane = paneId === activePaneId
+  const shouldShowProgress = isUploading && isActivePane
 
   return (
     <div
@@ -22,8 +29,8 @@ export function UploadArea() {
           : 'Drag and drop files here, or click to select files'}
       </p>
       
-      {/* Upload Progress */}
-      {isUploading && Object.keys(uploadProgress).length > 0 && (
+      {/* Upload Progress - Only show in active pane */}
+      {shouldShowProgress && Object.keys(uploadProgress).length > 0 && (
         <div className="mt-4 space-y-3 max-w-md mx-auto">
           {Object.entries(uploadProgress).map(([fileName, progress]) => (
             <div key={fileName} className="text-left">

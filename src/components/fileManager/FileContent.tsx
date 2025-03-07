@@ -41,7 +41,7 @@ export function FileContent({ paneId }: FileContentProps) {
     <div className="flex-1 flex flex-col min-h-0">
       {/* Show upload area in all panes, but only make it active in the focused pane */}
       <div className={`transition-opacity duration-200 ${!isActivePane ? 'opacity-50 pointer-events-none' : ''}`}>
-        <UploadArea />
+        <UploadArea paneId={paneId} />
       </div>
 
       {/* File List - Scrollable container */}
