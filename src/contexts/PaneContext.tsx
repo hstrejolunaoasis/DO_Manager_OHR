@@ -28,6 +28,8 @@ interface PaneContextType {
   handleTabClose: (tabId: string) => void
   addNewTab: () => void
   setViewMode: (paneId: string, mode: 'grid' | 'list' | 'tree') => void
+  setTabPath: (paneId: string, path: string) => void
+  setTabSearchQuery: (paneId: string, query: string) => void
 }
 
 const PaneContext = createContext<PaneContextType | undefined>(undefined)
@@ -204,6 +206,40 @@ export function PaneProvider({ children }: { children: ReactNode }) {
     ))
   }, [])
 
+  const setTabPath = useCallback((paneId: string, path: string) => {
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === paneId
+        ? {
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? {
+                    ...tab,
+                    path,
+                    label: path === '' ? 'Root' : path.split('/').filter(Boolean).pop() || 'Root'
+                  }
+                : tab
+            )
+          }
+        : pane
+    ))
+  }, [])
+
+  const setTabSearchQuery = useCallback((paneId: string, query: string) => {
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === paneId
+        ? {
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? { ...tab, searchQuery: query }
+                : tab
+            )
+          }
+        : pane
+    ))
+  }, [])
+
   const value = {
     panes,
     activePaneId,
@@ -217,6 +253,8 @@ export function PaneProvider({ children }: { children: ReactNode }) {
     handleTabClose,
     addNewTab,
     setViewMode,
+    setTabPath,
+    setTabSearchQuery,
   }
 
   return (

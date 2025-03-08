@@ -1,6 +1,12 @@
 import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react'
 import { usePane } from './PaneContext'
-import { FileObject } from './PaneContext'
+
+export interface FileObject {
+  Key: string
+  LastModified: Date
+  Size: number
+  Type: string
+}
 
 interface FileNavigationContextType {
   navigateToFolder: (path: string, paneId: string) => void
@@ -14,7 +20,7 @@ interface FileNavigationContextType {
 const FileNavigationContext = createContext<FileNavigationContextType | undefined>(undefined)
 
 export function FileNavigationProvider({ children }: { children: ReactNode }) {
-  const { panes } = usePane()
+  const { panes, setTabPath, setTabSearchQuery } = usePane()
   const [filesPerPane, setFilesPerPane] = useState<{ [paneId: string]: FileObject[] }>({})
   const [loadingPanes, setLoadingPanes] = useState<Set<string>>(new Set())
 
@@ -59,26 +65,14 @@ export function FileNavigationProvider({ children }: { children: ReactNode }) {
   }, [panes])
 
   const navigateToFolder = useCallback((path: string, paneId: string) => {
-    const pane = panes.find(p => p.id === paneId)
-    if (!pane) return
-
-    const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
-    if (!activeTab) return
-
-    // Update the path and fetch new files
+    setTabPath(paneId, path)
     fetchFilesForPane(paneId)
-  }, [panes, fetchFilesForPane])
+  }, [setTabPath, fetchFilesForPane])
 
   const handleSearchChange = useCallback((query: string, paneId: string) => {
-    const pane = panes.find(p => p.id === paneId)
-    if (!pane) return
-
-    const activeTab = pane.tabs.find(t => t.id === pane.activeTabId)
-    if (!activeTab) return
-
-    // Update the search query and fetch new files
+    setTabSearchQuery(paneId, query)
     fetchFilesForPane(paneId)
-  }, [panes, fetchFilesForPane])
+  }, [setTabSearchQuery, fetchFilesForPane])
 
   const formatSize = useCallback((bytes: number) => {
     if (bytes === 0) return '0 Bytes'
