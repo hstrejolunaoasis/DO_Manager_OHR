@@ -1,5 +1,8 @@
 import { FolderIcon, FolderPlusIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
+import { useFileOperations } from '../../contexts/FileOperationsContext'
+import { useFileNavigation } from '../../contexts/FileNavigationContext'
+import { useUIState } from '../../contexts/UIStateContext'
 import { SearchBar } from '../ui/SearchBar'
 import { ViewSelector } from '../ui/ViewSelector'
 import { GridSizeControl } from '../ui/GridSizeControl'
@@ -24,18 +27,14 @@ export function TopBar({
   const {
     panes,
     activePaneId,
-    getActivePane,
     handleTabClick,
     handleTabClose,
     addNewTab,
-    navigateToFolder,
-    handleSearchChange,
-    setIsNewFolderModalOpen,
-    viewMode,
     setViewMode,
-    gridSize,
-    setGridSize
-  } = useFileManager()
+  } = usePane()
+  const { setIsNewFolderModalOpen } = useFileOperations()
+  const { navigateToFolder, handleSearchChange } = useFileNavigation()
+  const { gridSize, setGridSize } = useUIState()
 
   const pane = panes.find(p => p.id === paneId)
   if (!pane) return null
@@ -124,7 +123,7 @@ export function TopBar({
           )}
           <ViewSelector
             currentView={activeTab?.viewMode || 'grid'}
-            onViewChange={setViewMode}
+            onViewChange={(mode) => setViewMode(paneId, mode)}
           />
         </div>
       </div>

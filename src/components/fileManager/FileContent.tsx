@@ -1,4 +1,6 @@
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
+import { useFileOperations } from '../../contexts/FileOperationsContext'
+import { useFileNavigation } from '../../contexts/FileNavigationContext'
 import { DirectoryList } from './DirectoryList'
 import { FileList } from './FileList'
 import { TreeView } from '../ui/TreeView'
@@ -9,16 +11,9 @@ interface FileContentProps {
 }
 
 export function FileContent({ paneId }: FileContentProps) {
-  const { 
-    getFilesForPane,
-    panes,
-    activePaneId,
-    navigateToFolder, 
-    handleDelete, 
-    handleDownload, 
-    handleCopyUrl, 
-    openRenameModal 
-  } = useFileManager()
+  const { panes, activePaneId } = usePane()
+  const { handleDelete, handleDownload, handleCopyUrl, openRenameModal } = useFileOperations()
+  const { getFilesForPane, navigateToFolder } = useFileNavigation()
 
   const pane = panes.find(p => p.id === paneId)
   if (!pane) return null

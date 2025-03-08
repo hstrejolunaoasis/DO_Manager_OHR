@@ -1,6 +1,7 @@
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
+import { useUIState } from '../../contexts/UIStateContext'
 import { FileItem } from './FileItem'
-import { FileObject } from '../../contexts/FileManagerContext'
+import { FileObject } from '../../contexts/PaneContext'
 
 interface FileListProps {
   files: FileObject[]
@@ -8,7 +9,12 @@ interface FileListProps {
 }
 
 export function FileList({ files, paneId }: FileListProps) {
-  const { viewMode, gridSize, activeTab } = useFileManager()
+  const { panes } = usePane()
+  const { gridSize } = useUIState()
+
+  const pane = panes.find(p => p.id === paneId)
+  const activeTab = pane?.tabs.find(t => t.id === pane.activeTabId)
+  const viewMode = activeTab?.viewMode || 'grid'
 
   if (files.length === 0) {
     return (

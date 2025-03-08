@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
 import { TopBar } from './TopBar'
 import { FileContent } from './FileContent'
 
@@ -20,7 +20,7 @@ export function SplitViewContainer() {
     moveTabToPane,
     addPane,
     removePane
-  } = useFileManager()
+  } = usePane()
 
   const containerRef = useRef<HTMLDivElement>(null)
   const resizeRef = useRef<{ paneId: string; startX: number; startWidth: number } | null>(null)
@@ -68,16 +68,28 @@ export function SplitViewContainer() {
     })
   }
 
+  const handleTabDragEnd = () => {
+    setDragState({
+      isDragging: false,
+      draggedTabId: null,
+      draggedFromPaneId: null,
+      dropPreviewPaneId: null,
+      dropPreviewPosition: null
+    })
+  }
+
   const handleTabDragOver = (e: React.DragEvent, paneId: string) => {
     e.preventDefault()
-    if (!dragState.isDragging || !containerRef.current) return
+    if (!dragState.isDragging || !dragState.draggedTabId || !dragState.draggedFromPaneId) return
 
-    const paneRect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const mouseX = e.clientX - paneRect.left
-    const paneWidth = paneRect.width
-    const position = mouseX < paneWidth / 3 ? 'left'
-      : mouseX > (paneWidth * 2) / 3 ? 'right'
-      : 'current'
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const relativeX = x / rect.width
+
+    let position: 'left' | 'right' | 'current' = 'current'
+    if (paneId !== dragState.draggedFromPaneId) {
+      position = relativeX < 0.5 ? 'left' : 'right'
+    }
 
     setDragState(prev => ({
       ...prev,
@@ -88,36 +100,30 @@ export function SplitViewContainer() {
 
   const handleTabDrop = (e: React.DragEvent, targetPaneId: string) => {
     e.preventDefault()
-    const { draggedTabId, draggedFromPaneId, dropPreviewPosition } = dragState
-    if (!draggedTabId || !draggedFromPaneId) return
+    if (!dragState.draggedTabId || !dragState.draggedFromPaneId || !dragState.dropPreviewPosition) return
 
-    if (dropPreviewPosition === 'left' || dropPreviewPosition === 'right') {
-      // Create new pane
+    const { draggedTabId, draggedFromPaneId, dropPreviewPosition } = dragState
+
+    if (dropPreviewPosition === 'current' && targetPaneId === draggedFromPaneId) {
+      // Tab dropped on its own pane, do nothing
+      handleTabDragEnd()
+      return
+    }
+
+    if (dropPreviewPosition === 'left') {
+      // Create new pane to the left
       const newPaneId = `pane-${Date.now()}`
-      addPane()
+      moveTabToPane(draggedTabId, draggedFromPaneId, newPaneId)
+    } else if (dropPreviewPosition === 'right') {
+      // Create new pane to the right
+      const newPaneId = `pane-${Date.now()}`
       moveTabToPane(draggedTabId, draggedFromPaneId, newPaneId)
     } else {
-      // Move to existing pane
+      // Move tab to existing pane
       moveTabToPane(draggedTabId, draggedFromPaneId, targetPaneId)
     }
 
-    setDragState({
-      isDragging: false,
-      draggedTabId: null,
-      draggedFromPaneId: null,
-      dropPreviewPaneId: null,
-      dropPreviewPosition: null
-    })
-  }
-
-  const handleTabDragEnd = () => {
-    setDragState({
-      isDragging: false,
-      draggedTabId: null,
-      draggedFromPaneId: null,
-      dropPreviewPaneId: null,
-      dropPreviewPosition: null
-    })
+    handleTabDragEnd()
   }
 
   return (
@@ -173,7 +179,7 @@ export function SplitViewContainer() {
             {/* Resize handle */}
             {index < panes.length - 1 && (
               <div
-                className="w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize"
+                className="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize transition-colors"
                 onMouseDown={(e) => handleMouseDown(e, pane.id, pane.width)}
               />
             )}

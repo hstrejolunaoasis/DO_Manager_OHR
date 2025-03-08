@@ -1,5 +1,6 @@
 import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
+import { useUIState } from '../../contexts/UIStateContext'
 import { useFileUpload } from '../../hooks/useFileUpload'
 
 interface UploadAreaProps {
@@ -7,7 +8,8 @@ interface UploadAreaProps {
 }
 
 export function UploadArea({ paneId }: UploadAreaProps) {
-  const { isUploading, uploadProgress, activePaneId } = useFileManager()
+  const { activePaneId } = usePane()
+  const { isUploading, uploadProgress } = useUIState()
   const { getRootProps, getInputProps, isDragActive } = useFileUpload()
   
   const isActivePane = paneId === activePaneId

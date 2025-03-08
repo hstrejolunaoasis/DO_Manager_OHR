@@ -1,15 +1,14 @@
 import { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import toast from 'react-hot-toast'
-import { useFileManager } from '../contexts/FileManagerContext'
+import { usePane } from '../contexts/PaneContext'
+import { useUIState } from '../contexts/UIStateContext'
+import { useFileNavigation } from '../contexts/FileNavigationContext'
 
 export function useFileUpload() {
-  const {
-    getActivePane,
-    setIsUploading,
-    setUploadProgress,
-    mutate
-  } = useFileManager()
+  const { getActivePane } = usePane()
+  const { setIsUploading, setUploadProgress } = useUIState()
+  const { mutate } = useFileNavigation()
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const activePane = getActivePane()
@@ -35,38 +34,16 @@ export function useFileUpload() {
       })
       formData.append('path', activeTab.path || '')
 
-      // Use XMLHttpRequest for upload progress
-      const response = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) {
-            const progress = (event.loaded / event.total) * 100
-            // Update progress for all files
-            const updatedProgress = Object.keys(initialProgress).reduce((acc, fileName) => {
-              acc[fileName] = progress
-              return acc
-            }, {} as { [key: string]: number })
-            setUploadProgress(updatedProgress)
-          }
-        }
-
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(xhr.response)
-          } else {
-            reject(new Error('Upload failed'))
-          }
-        }
-
-        xhr.onerror = () => reject(new Error('Upload failed'))
-        
-        xhr.open('POST', '/api/upload')
-        xhr.send(formData)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
       })
 
-      toast.success('Files uploaded successfully!')
-      // Clear progress after successful upload
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      toast.success('Files uploaded successfully')
       setUploadProgress({})
       mutate()
     } catch (error) {
@@ -75,13 +52,11 @@ export function useFileUpload() {
     } finally {
       setIsUploading(false)
     }
-  }, [getActivePane, mutate, setIsUploading, setUploadProgress])
+  }, [getActivePane, setIsUploading, setUploadProgress, mutate])
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
-
-  return {
-    getRootProps,
-    getInputProps,
-    isDragActive
-  }
+  return useDropzone({
+    onDrop,
+    noClick: false,
+    noKeyboard: false,
+  })
 } 

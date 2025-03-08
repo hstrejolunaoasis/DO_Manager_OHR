@@ -1,6 +1,6 @@
 import { FolderIcon } from '@heroicons/react/24/outline'
-import { useFileManager } from '../../contexts/FileManagerContext'
-import { FileObject } from '../../contexts/FileManagerContext'
+import { useFileNavigation } from '../../contexts/FileNavigationContext'
+import { FileObject } from '../../contexts/PaneContext'
 
 interface DirectoryListProps {
   directories: FileObject[]
@@ -8,7 +8,7 @@ interface DirectoryListProps {
 }
 
 export function DirectoryList({ directories, paneId }: DirectoryListProps) {
-  const { navigateToFolder, getDirectoryName } = useFileManager()
+  const { navigateToFolder, getDirectoryName } = useFileNavigation()
 
   if (directories.length === 0) {
     return null

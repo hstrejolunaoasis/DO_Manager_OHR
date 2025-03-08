@@ -4,8 +4,9 @@ import {
   ArrowDownTrayIcon, 
   LinkIcon 
 } from '@heroicons/react/24/outline'
-import { useFileManager } from '../../contexts/FileManagerContext'
-import { FileObject } from '../../contexts/FileManagerContext'
+import { useFileOperations } from '../../contexts/FileOperationsContext'
+import { useFileNavigation } from '../../contexts/FileNavigationContext'
+import { FileObject } from '../../contexts/PaneContext'
 import { FilePreview } from '../ui/FilePreview'
 
 interface FileItemProps {
@@ -14,13 +15,8 @@ interface FileItemProps {
 }
 
 export function FileItem({ file, viewMode }: FileItemProps) {
-  const { 
-    handleDelete, 
-    handleDownload, 
-    handleCopyUrl, 
-    openRenameModal,
-    formatSize
-  } = useFileManager()
+  const { handleDelete, handleDownload, handleCopyUrl, openRenameModal } = useFileOperations()
+  const { formatSize } = useFileNavigation()
 
   const fileName = file.Key.split('/').pop() || ''
 

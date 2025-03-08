@@ -1,8 +1,10 @@
-import { useFileManager } from '../../contexts/FileManagerContext'
+import { usePane } from '../../contexts/PaneContext'
+import { useFileOperations } from '../../contexts/FileOperationsContext'
 import { NewFolderModal } from '../ui/NewFolderModal'
 import { RenameModal } from '../ui/RenameModal'
 
 export function Modals() {
+  const { getActivePane } = usePane()
   const {
     isNewFolderModalOpen,
     setIsNewFolderModalOpen,
@@ -12,15 +14,17 @@ export function Modals() {
     setFileToRename,
     handleCreateFolder,
     handleRename,
-    activeTab
-  } = useFileManager()
+  } = useFileOperations()
+
+  const activePane = getActivePane()
+  const activeTab = activePane.tabs.find(t => t.id === activePane.activeTabId)
 
   return (
     <>
       <NewFolderModal
         isOpen={isNewFolderModalOpen}
         onClose={() => setIsNewFolderModalOpen(false)}
-        onSubmit={handleCreateFolder}
+        onSubmit={(name) => handleCreateFolder(name, activeTab?.path || '')}
         currentPath={activeTab?.path || ''}
       />
 
