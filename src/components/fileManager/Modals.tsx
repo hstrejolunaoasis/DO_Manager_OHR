@@ -36,6 +36,7 @@ export function Modals() {
         }}
         onSubmit={handleRename}
         currentName={fileToRename?.Key.split('/').pop() || ''}
+        isDirectory={fileToRename?.Key.endsWith('/')}
       />
 
       <PrivacyModal
@@ -50,4 +51,4 @@ export function Modals() {
       />
     </>
   )
-} 
+}

@@ -491,27 +491,57 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
     try {
       const oldKey = fileToRename.Key
-      const pathParts = oldKey.split('/')
-      pathParts[pathParts.length - 1] = newName
-      const newKey = pathParts.join('/')
+      
+      // Check if it's a directory (ends with '/')
+      if (oldKey.endsWith('/')) {
+        // For directories, we need to get the new key by replacing the directory name
+        // while keeping the path structure
+        const pathParts = oldKey.split('/')
+        // Remove empty string at the end caused by trailing slash
+        pathParts.pop()
+        // Get the directory name (last part)
+        const dirName = pathParts.pop()
+        // Add the new name and restore the trailing slash
+        pathParts.push(newName)
+        const newKey = pathParts.join('/') + '/'
+        
+        const response = await fetch('/api/folders/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        })
 
-      const response = await fetch('/api/files/rename', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          oldKey,
-          newKey,
-        }),
-      })
+        if (!response.ok) throw new Error('Failed to rename directory')
+        toast.success('Directory renamed successfully')
+      } else {
+        // Handle regular file rename as before
+        const pathParts = oldKey.split('/')
+        pathParts[pathParts.length - 1] = newName
+        const newKey = pathParts.join('/')
 
-      if (!response.ok) throw new Error('Failed to rename file')
+        const response = await fetch('/api/files/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        })
 
-      toast.success('File renamed successfully')
+        if (!response.ok) throw new Error('Failed to rename file')
+        toast.success('File renamed successfully')
+      }
+      
       mutate()
     } catch (error) {
-      toast.error('Failed to rename file')
+      toast.error('Failed to rename item')
       console.error('Rename error:', error)
     }
   }

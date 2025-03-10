@@ -7,9 +7,10 @@ interface RenameModalProps {
   onClose: () => void
   onSubmit: (newName: string) => Promise<void>
   currentName: string
+  isDirectory: boolean
 }
 
-export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameModalProps) {
+export function RenameModal({ isOpen, onClose, onSubmit, currentName, isDirectory }: RenameModalProps) {
   const [newName, setNewName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -64,7 +65,7 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
                   className="text-lg font-medium leading-6 text-gray-900 flex items-center"
                 >
                   <PencilIcon className="h-6 w-6 mr-2 text-blue-500" />
-                  Rename File
+                  {isDirectory ? 'Rename Directory' : 'Rename File'}
                 </Dialog.Title>
 
                 <form onSubmit={handleSubmit} className="mt-4">
@@ -111,4 +112,4 @@ export function RenameModal({ isOpen, onClose, onSubmit, currentName }: RenameMo
       </Dialog>
     </Transition>
   )
-} 
+}
