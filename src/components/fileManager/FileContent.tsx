@@ -1,7 +1,6 @@
 import { useFileManager } from '../../contexts/FileManagerContext'
 import { DirectoryList } from './DirectoryList'
 import { FileList } from './FileList'
-import { TreeView } from '../ui/TreeView'
 import { UploadArea } from './UploadArea'
 
 interface FileContentProps {
@@ -13,11 +12,6 @@ export function FileContent({ paneId }: FileContentProps) {
     getFilesForPane,
     panes,
     activePaneId,
-    navigateToFolder, 
-    handleDelete, 
-    handleDownload, 
-    handleCopyUrl, 
-    openRenameModal 
   } = useFileManager()
 
   const pane = panes.find(p => p.id === paneId)
@@ -46,32 +40,20 @@ export function FileContent({ paneId }: FileContentProps) {
 
       {/* File List - Scrollable container */}
       <div className="flex-1 overflow-y-auto min-h-0">
-        {activeTab?.viewMode === 'tree' ? (
-          <TreeView
-            files={files}
-            currentPath={activeTab?.path || ''}
-            onNavigate={(path) => navigateToFolder(path, paneId)}
-            onDelete={handleDelete}
-            onDownload={handleDownload}
-            onCopyUrl={handleCopyUrl}
-            onRename={openRenameModal}
+        <div className="px-4 py-6">
+          {/* Directories */}
+          <DirectoryList 
+            directories={files.filter(file => file.Key.endsWith('/'))}
+            paneId={paneId}
           />
-        ) : (
-          <div className="px-4 py-6">
-            {/* Directories */}
-            <DirectoryList 
-              directories={files.filter(file => file.Key.endsWith('/'))}
-              paneId={paneId}
-            />
 
-            {/* Files */}
-            <FileList 
-              files={files.filter(file => !file.Key.endsWith('/'))}
-              paneId={paneId}
-            />
-          </div>
-        )}
+          {/* Files */}
+          <FileList 
+            files={files.filter(file => !file.Key.endsWith('/'))}
+            paneId={paneId}
+          />
+        </div>
       </div>
     </div>
   )
-} 
+}

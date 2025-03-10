@@ -7,13 +7,12 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const prefix = searchParams.get('prefix') || ''
     const search = searchParams.get('search')?.toLowerCase() || ''
-    const viewMode = searchParams.get('viewMode')
 
-    // Don't use delimiter for search or tree view to get all nested contents
+    // Don't use delimiter for search to get all nested contents
     const command = new ListObjectsV2Command({
       Bucket: BUCKET_NAME,
       Prefix: prefix,
-      Delimiter: (search || viewMode === 'tree') ? undefined : '/',
+      Delimiter: search ? undefined : '/',
     })
 
     const response = await spacesClient.send(command)
@@ -43,8 +42,8 @@ export async function GET(request: Request) {
         for (const item of response.Contents) {
           if (!item.Key || item.Key === prefix) continue
 
-          // For tree view or search mode, extract all parent directories
-          if (viewMode === 'tree' || search) {
+          // For search mode, extract all parent directories
+          if (search) {
             const parts = item.Key.split('/')
             parts.pop() // Remove the file name
             let currentPath = ''
@@ -106,4 +105,4 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

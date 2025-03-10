@@ -7,9 +7,10 @@ interface PrivacyModalProps {
   onClose: () => void
   onSubmit: (isPrivate: boolean) => void
   filename: string
+  remainingCount?: number
 }
 
-export function PrivacyModal({ isOpen, onClose, onSubmit, filename }: PrivacyModalProps) {
+export function PrivacyModal({ isOpen, onClose, onSubmit, filename, remainingCount = 0 }: PrivacyModalProps) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-10" onClose={onClose}>
@@ -45,33 +46,31 @@ export function PrivacyModal({ isOpen, onClose, onSubmit, filename }: PrivacyMod
                 </Dialog.Title>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500">
-                    Choose the privacy setting for: <span className="font-medium">{filename}</span>
+                    Choose the privacy setting for <span className="font-medium">{filename}</span>
+                    {remainingCount > 0 && (
+                      <span className="block mt-1 text-xs text-gray-400">
+                        {remainingCount} more {remainingCount === 1 ? 'file' : 'files'} remaining
+                      </span>
+                    )}
                   </p>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-4">
                   <button
-                    onClick={() => {
-                      onSubmit(true)
-                      onClose()
-                    }}
-                    className="flex flex-col items-center justify-center p-4 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    type="button"
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => onSubmit(false)}
                   >
-                    <LockClosedIcon className="w-8 h-8 text-gray-600" />
-                    <span className="mt-2 font-medium text-gray-900">Private</span>
-                    <span className="mt-1 text-xs text-gray-500">Only authorized users can access</span>
+                    <GlobeAltIcon className="w-5 h-5 mr-2" />
+                    Public
                   </button>
-
                   <button
-                    onClick={() => {
-                      onSubmit(false)
-                      onClose()
-                    }}
-                    className="flex flex-col items-center justify-center p-4 border-2 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    type="button"
+                    className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    onClick={() => onSubmit(true)}
                   >
-                    <GlobeAltIcon className="w-8 h-8 text-gray-600" />
-                    <span className="mt-2 font-medium text-gray-900">Public</span>
-                    <span className="mt-1 text-xs text-gray-500">Anyone can access with the URL</span>
+                    <LockClosedIcon className="w-5 h-5 mr-2" />
+                    Private
                   </button>
                 </div>
               </Dialog.Panel>

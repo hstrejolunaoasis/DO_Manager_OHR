@@ -15,7 +15,7 @@ export interface TabState {
   path: string
   label: string
   searchQuery: string
-  viewMode: 'grid' | 'list' | 'tree'
+  viewMode: 'grid' | 'list'
 }
 
 export interface PaneState {
@@ -23,6 +23,13 @@ export interface PaneState {
   tabs: TabState[]
   activeTabId: string
   width: number // Percentage of total width
+}
+
+interface FileToUpload {
+  file: File
+  path: string
+  remainingFiles?: File[]
+  currentPath?: string
 }
 
 // Context type
@@ -43,8 +50,8 @@ interface FileManagerContextType {
   addNewTab: () => void
   
   // State
-  viewMode: 'grid' | 'list' | 'tree'
-  setViewMode: (mode: 'grid' | 'list' | 'tree') => void
+  viewMode: 'grid' | 'list'
+  setViewMode: (mode: 'grid' | 'list') => void
   gridSize: number
   setGridSize: (size: number) => void
   selectedFile: string | null
@@ -84,8 +91,8 @@ interface FileManagerContextType {
   // Privacy Modal
   isPrivacyModalOpen: boolean
   setIsPrivacyModalOpen: (isOpen: boolean) => void
-  fileToSetPrivacy: { file: File, path: string } | null
-  setFileToSetPrivacy: (file: { file: File, path: string } | null) => void
+  fileToSetPrivacy: FileToUpload | null
+  setFileToSetPrivacy: (file: FileToUpload | null) => void
   handleSetPrivacy: (isPrivate: boolean) => Promise<void>
 }
 
@@ -138,7 +145,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
   // Privacy Modal state
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
-  const [fileToSetPrivacy, setFileToSetPrivacy] = useState<{ file: File, path: string } | null>(null)
+  const [fileToSetPrivacy, setFileToSetPrivacy] = useState<FileToUpload | null>(null)
   
   // Get active pane and tab
   const getActivePane = useCallback(() => {
@@ -152,7 +159,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
   // View mode getter and setter
   const viewMode = activeTab?.viewMode || 'grid'
-  const setViewMode = useCallback((mode: 'grid' | 'list' | 'tree') => {
+  const setViewMode = useCallback((mode: 'grid' | 'list') => {
     setPanes(prevPanes => prevPanes.map(pane =>
       pane.id === activePaneId
         ? {
@@ -185,8 +192,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`/api/files?${new URLSearchParams({
         ...(activeTab.path ? { prefix: activeTab.path } : {}),
-        ...(activeTab.searchQuery ? { search: activeTab.searchQuery } : {}),
-        viewMode: activeTab.viewMode
+        ...(activeTab.searchQuery ? { search: activeTab.searchQuery } : {})
       }).toString()}`)
 
       if (!response.ok) {
@@ -522,9 +528,10 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     try {
       setIsUploading(true)
       // Initialize progress for the file
-      setUploadProgress({
+      setUploadProgress(prev => ({
+        ...prev,
         [fileToSetPrivacy.file.name]: 0
-      })
+      }))
 
       const formData = new FormData()
       formData.append('files', fileToSetPrivacy.file)
@@ -538,9 +545,10 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
             const progress = (event.loaded / event.total) * 100
-            setUploadProgress({
+            setUploadProgress(prev => ({
+              ...prev,
               [fileToSetPrivacy.file.name]: progress
-            })
+            }))
           }
         }
 
@@ -558,13 +566,32 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
         xhr.send(formData)
       })
 
-      toast.success('File uploaded successfully!')
-      setUploadProgress({})
+      toast.success(`${fileToSetPrivacy.file.name} uploaded successfully!`)
+      setUploadProgress(prev => {
+        const newProgress = { ...prev }
+        delete newProgress[fileToSetPrivacy.file.name]
+        return newProgress
+      })
       mutate()
+
+      // Handle remaining files if any
+      if (fileToSetPrivacy.remainingFiles && fileToSetPrivacy.remainingFiles.length > 0) {
+        const [nextFile, ...remainingFiles] = fileToSetPrivacy.remainingFiles
+        setFileToSetPrivacy({
+          file: nextFile,
+          path: fileToSetPrivacy.currentPath || '',
+          remainingFiles,
+          currentPath: fileToSetPrivacy.currentPath
+        })
+        setIsPrivacyModalOpen(true)
+      } else {
+        setIsUploading(false)
+        setFileToSetPrivacy(null)
+        setIsPrivacyModalOpen(false)
+      }
     } catch (error) {
       console.error('Upload error:', error)
-      toast.error('Failed to upload file')
-    } finally {
+      toast.error(`Failed to upload ${fileToSetPrivacy.file.name}`)
       setIsUploading(false)
       setFileToSetPrivacy(null)
       setIsPrivacyModalOpen(false)
@@ -663,4 +690,4 @@ export function useFileManager() {
     throw new Error('useFileManager must be used within a FileManagerProvider')
   }
   return context
-} 
+}

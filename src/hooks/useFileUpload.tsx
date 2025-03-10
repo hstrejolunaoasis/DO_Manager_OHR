@@ -22,14 +22,16 @@ export function useFileUpload() {
       return
     }
 
-    // For each file, show the privacy modal
-    acceptedFiles.forEach(file => {
+    // Show privacy modal for the first file
+    if (acceptedFiles.length > 0) {
       setFileToSetPrivacy({
-        file,
-        path: activeTab.path || ''
+        file: acceptedFiles[0],
+        path: activeTab.path || '',
+        remainingFiles: acceptedFiles.slice(1),
+        currentPath: activeTab.path || ''
       })
       setIsPrivacyModalOpen(true)
-    })
+    }
   }, [getActivePane, setFileToSetPrivacy, setIsPrivacyModalOpen])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })

@@ -46,6 +46,7 @@ export function Modals() {
         }}
         onSubmit={handleSetPrivacy}
         filename={fileToSetPrivacy?.file.name || ''}
+        remainingCount={fileToSetPrivacy?.remainingFiles?.length || 0}
       />
     </>
   )

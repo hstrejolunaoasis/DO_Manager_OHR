@@ -1,9 +1,9 @@
-import { Squares2X2Icon, ListBulletIcon, ViewColumnsIcon } from '@heroicons/react/24/outline'
+import { Squares2X2Icon, ListBulletIcon } from '@heroicons/react/24/outline'
 import { Tooltip } from './Tooltip'
 
 interface ViewSelectorProps {
-  currentView: 'grid' | 'list' | 'tree'
-  onViewChange: (view: 'grid' | 'list' | 'tree') => void
+  currentView: 'grid' | 'list'
+  onViewChange: (view: 'grid' | 'list') => void
 }
 
 export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
@@ -35,19 +35,6 @@ export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
           <ListBulletIcon className="w-5 h-5" />
         </button>
       </Tooltip>
-      <Tooltip content="Folder tree">
-        <button
-          onClick={() => onViewChange('tree')}
-          className={`p-2 rounded-md ${
-            currentView === 'tree'
-              ? 'bg-white text-blue-600 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
-          }`}
-          aria-label="Tree view"
-        >
-          <ViewColumnsIcon className="w-5 h-5" />
-        </button>
-      </Tooltip>
     </div>
   )
-} 
+}
