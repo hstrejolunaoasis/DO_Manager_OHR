@@ -1,6 +1,7 @@
 import { useFileManager } from '../../contexts/FileManagerContext'
 import { NewFolderModal } from '../ui/NewFolderModal'
 import { RenameModal } from '../ui/RenameModal'
+import { PrivacyModal } from '../ui/PrivacyModal'
 
 export function Modals() {
   const {
@@ -12,7 +13,11 @@ export function Modals() {
     setFileToRename,
     handleCreateFolder,
     handleRename,
-    activeTab
+    isPrivacyModalOpen,
+    setIsPrivacyModalOpen,
+    fileToSetPrivacy,
+    setFileToSetPrivacy,
+    handleSetPrivacy
   } = useFileManager()
 
   return (
@@ -21,7 +26,6 @@ export function Modals() {
         isOpen={isNewFolderModalOpen}
         onClose={() => setIsNewFolderModalOpen(false)}
         onSubmit={handleCreateFolder}
-        currentPath={activeTab?.path || ''}
       />
 
       <RenameModal
@@ -32,6 +36,16 @@ export function Modals() {
         }}
         onSubmit={handleRename}
         currentName={fileToRename?.Key.split('/').pop() || ''}
+      />
+
+      <PrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => {
+          setIsPrivacyModalOpen(false)
+          setFileToSetPrivacy(null)
+        }}
+        onSubmit={handleSetPrivacy}
+        filename={fileToSetPrivacy?.file.name || ''}
       />
     </>
   )

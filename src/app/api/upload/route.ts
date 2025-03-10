@@ -7,6 +7,7 @@ export async function POST(request: Request) {
     const formData = await request.formData()
     const files = formData.getAll('files')
     const path = formData.get('path') || ''
+    const isPrivate = formData.get('isPrivate') === 'true'
     
     const uploadPromises = files.map(async (file: any) => {
       const buffer = Buffer.from(await file.arrayBuffer())
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
         Key: key,
         Body: buffer,
         ContentType: file.type,
-        ACL: 'public-read',
+        ACL: isPrivate ? 'private' : 'public-read',
       })
 
       return spacesClient.send(command)

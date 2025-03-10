@@ -80,6 +80,13 @@ interface FileManagerContextType {
   // Utilities
   formatSize: (bytes: number) => string
   getDirectoryName: (path: string) => string
+  
+  // Privacy Modal
+  isPrivacyModalOpen: boolean
+  setIsPrivacyModalOpen: (isOpen: boolean) => void
+  fileToSetPrivacy: { file: File, path: string } | null
+  setFileToSetPrivacy: (file: { file: File, path: string } | null) => void
+  handleSetPrivacy: (isPrivate: boolean) => Promise<void>
 }
 
 // Fetcher function
@@ -129,6 +136,10 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   const [filesPerPane, setFilesPerPane] = useState<{ [paneId: string]: FileObject[] }>({})
   const [loadingPanes, setLoadingPanes] = useState<Set<string>>(new Set())
 
+  // Privacy Modal state
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
+  const [fileToSetPrivacy, setFileToSetPrivacy] = useState<{ file: File, path: string } | null>(null)
+  
   // Get active pane and tab
   const getActivePane = useCallback(() => {
     return panes.find(p => p.id === activePaneId) || panes[0]
@@ -504,6 +515,62 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     setIsRenameModalOpen(true)
   }
 
+  // Handle privacy setting
+  const handleSetPrivacy = useCallback(async (isPrivate: boolean) => {
+    if (!fileToSetPrivacy) return
+
+    try {
+      setIsUploading(true)
+      // Initialize progress for the file
+      setUploadProgress({
+        [fileToSetPrivacy.file.name]: 0
+      })
+
+      const formData = new FormData()
+      formData.append('files', fileToSetPrivacy.file)
+      formData.append('path', fileToSetPrivacy.path)
+      formData.append('isPrivate', String(isPrivate))
+
+      // Use XMLHttpRequest for upload progress
+      const response = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+        
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const progress = (event.loaded / event.total) * 100
+            setUploadProgress({
+              [fileToSetPrivacy.file.name]: progress
+            })
+          }
+        }
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(xhr.response)
+          } else {
+            reject(new Error('Upload failed'))
+          }
+        }
+
+        xhr.onerror = () => reject(new Error('Upload failed'))
+        
+        xhr.open('POST', '/api/upload')
+        xhr.send(formData)
+      })
+
+      toast.success('File uploaded successfully!')
+      setUploadProgress({})
+      mutate()
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Failed to upload file')
+    } finally {
+      setIsUploading(false)
+      setFileToSetPrivacy(null)
+      setIsPrivacyModalOpen(false)
+    }
+  }, [fileToSetPrivacy, mutate, setIsUploading, setUploadProgress])
+
   // Utilities
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes'
@@ -573,6 +640,13 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     // Utilities
     formatSize,
     getDirectoryName,
+    
+    // Privacy Modal
+    isPrivacyModalOpen,
+    setIsPrivacyModalOpen,
+    fileToSetPrivacy,
+    setFileToSetPrivacy,
+    handleSetPrivacy,
   }
 
   return (
