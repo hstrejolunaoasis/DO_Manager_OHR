@@ -3,6 +3,7 @@ import { NewFolderModal } from '../ui/NewFolderModal'
 import { RenameModal } from '../ui/RenameModal'
 import { PrivacyModal } from '../ui/PrivacyModal'
 import { DeleteConfirmationModal } from '../ui/DeleteConfirmationModal'
+import { HistoryPanel } from './HistoryPanel'
 
 export function Modals() {
   const {
@@ -23,7 +24,9 @@ export function Modals() {
     setIsDeleteModalOpen,
     itemToDelete,
     setItemToDelete,
-    handleDeleteConfirm
+    handleDeleteConfirm,
+    // New history panel state
+    isHistoryPanelOpen
   } = useFileManager()
 
   return (
@@ -67,6 +70,9 @@ export function Modals() {
         isDirectory={itemToDelete?.isDirectory || false}
         itemCount={itemToDelete?.itemCount || 0}
       />
+      
+      {/* History Panel */}
+      <HistoryPanel />
     </>
   )
 }

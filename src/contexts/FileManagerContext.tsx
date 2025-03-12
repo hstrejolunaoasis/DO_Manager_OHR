@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useMemo, useCallback, ReactNode, useEffect } from 'react'
 import useSWR from 'swr'
 import toast from 'react-hot-toast'
+import historyService from '../services/historyService'
+import { HistoryEntry, OperationType } from '../types/historyTypes'
 
 // Types
 export interface FileObject {
@@ -102,6 +104,13 @@ interface FileManagerContextType {
   itemToDelete: { key: string; isDirectory: boolean; itemCount?: number } | null;
   setItemToDelete: (item: { key: string; isDirectory: boolean; itemCount?: number } | null) => void;
   handleDeleteConfirm: () => Promise<void>;
+
+  // History
+  history: HistoryEntry[];
+  clearHistory: () => void;
+  undoOperation: (entryId: string) => Promise<void>;
+  isHistoryPanelOpen: boolean;
+  setIsHistoryPanelOpen: (isOpen: boolean) => void;
 }
 
 // Fetcher function
@@ -159,38 +168,21 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ key: string; isDirectory: boolean; itemCount?: number } | null>(null);
   
-  // Get active pane and tab
-  const getActivePane = useCallback(() => {
-    return panes.find(p => p.id === activePaneId) || panes[0]
-  }, [panes, activePaneId])
-
-  const activeTab = useMemo(() => {
-    const activePane = getActivePane()
-    return activePane.tabs.find(t => t.id === activePane.activeTabId)
-  }, [getActivePane])
-
-  // View mode getter and setter
-  const viewMode = activeTab?.viewMode || 'grid'
-  const setViewMode = useCallback((mode: 'grid' | 'list') => {
-    setPanes(prevPanes => prevPanes.map(pane =>
-      pane.id === activePaneId
-        ? {
-            ...pane,
-            tabs: pane.tabs.map(tab =>
-              tab.id === pane.activeTabId
-                ? { ...tab, viewMode: mode }
-                : tab
-            )
-          }
-        : pane
-    ))
-  }, [activePaneId])
-
-  // Get files for a specific pane
-  const getFilesForPane = useCallback((paneId: string) => {
-    return filesPerPane[paneId]
-  }, [filesPerPane])
-
+  // History state
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [isHistoryPanelOpen, setIsHistoryPanelOpen] = useState<boolean>(false);
+  
+  // Fetch history from service
+  useEffect(() => {
+    setHistory(historyService.getHistory());
+  }, []);
+  
+  // Clear history
+  const clearHistory = useCallback(() => {
+    historyService.clearHistory();
+    setHistory([]);
+  }, []);
+  
   // Fetch files for a specific pane
   const fetchFilesForPane = useCallback(async (paneId: string) => {
     const pane = panes.find(p => p.id === paneId)
@@ -226,6 +218,119 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
       })
     }
   }, [panes])
+
+  // Update mutate to refresh all panes
+  const mutate = useCallback(async () => {
+    await Promise.all(panes.map(pane => fetchFilesForPane(pane.id)))
+  }, [panes, fetchFilesForPane])
+
+  // Function to undo an operation
+  const undoOperation = useCallback(async (entryId: string) => {
+    const entry = history.find(h => h.id === entryId);
+    
+    if (!entry || entry.undone || !entry.undoable) {
+      return;
+    }
+    
+    try {
+      switch (entry.operationType) {
+        case OperationType.DELETE_FILE:
+        case OperationType.DELETE_FOLDER:
+          // For now, we'll show a message that restoration isn't implemented
+          toast.error('File restoration not implemented yet');
+          break;
+          
+        case OperationType.RENAME_FILE:
+        case OperationType.RENAME_FOLDER:
+          if (entry.details.oldKey && entry.details.newKey) {
+            await fetch('/api/files/rename', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                oldKey: entry.details.newKey,
+                newKey: entry.details.oldKey
+              })
+            });
+            toast.success('Rename undone successfully');
+          }
+          break;
+          
+        case OperationType.CREATE_FOLDER:
+          if (entry.details.key) {
+            await fetch('/api/folders/delete', {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                key: entry.details.key
+              })
+            });
+            toast.success('Folder creation undone');
+          }
+          break;
+          
+        case OperationType.UPLOAD_FILE:
+          if (entry.details.key) {
+            await fetch('/api/files/delete', {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                key: entry.details.key
+              })
+            });
+            toast.success('File upload undone');
+          }
+          break;
+      }
+      
+      // Mark operation as undone
+      historyService.markAsUndone(entryId);
+      setHistory(historyService.getHistory());
+      
+      // Refresh file list
+      mutate();
+    } catch (error) {
+      console.error('Undo error:', error);
+      toast.error('Failed to undo operation');
+    }
+  }, [history, mutate]);
+  
+  // Get active pane and tab
+  const getActivePane = useCallback(() => {
+    return panes.find(p => p.id === activePaneId) || panes[0]
+  }, [panes, activePaneId])
+
+  const activeTab = useMemo(() => {
+    const activePane = getActivePane()
+    return activePane.tabs.find(t => t.id === activePane.activeTabId)
+  }, [getActivePane])
+
+  // View mode getter and setter
+  const viewMode = activeTab?.viewMode || 'grid'
+  const setViewMode = useCallback((mode: 'grid' | 'list') => {
+    setPanes(prevPanes => prevPanes.map(pane =>
+      pane.id === activePaneId
+        ? {
+            ...pane,
+            tabs: pane.tabs.map(tab =>
+              tab.id === pane.activeTabId
+                ? { ...tab, viewMode: mode }
+                : tab
+            )
+          }
+        : pane
+    ))
+  }, [activePaneId])
+
+  // Get files for a specific pane
+  const getFilesForPane = useCallback((paneId: string) => {
+    return filesPerPane[paneId]
+  }, [filesPerPane])
 
   // Pane operations
   const addPane = useCallback(() => {
@@ -426,11 +531,6 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     })
   }, [panes, fetchFilesForPane])
 
-  // Update mutate to refresh all panes
-  const mutate = useCallback(async () => {
-    await Promise.all(panes.map(pane => fetchFilesForPane(pane.id)))
-  }, [panes, fetchFilesForPane])
-
   // File operations
   const handleDelete = async (key: string) => {
     setItemToDelete({ key, isDirectory: false });
@@ -471,36 +571,48 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
           path: activeTab?.path,
           name,
         }),
-      })
+      });
 
-      if (!response.ok) throw new Error('Failed to create folder')
+      if (!response.ok) throw new Error('Failed to create folder');
+      
+      // Add history entry
+      const folderPath = `${activeTab?.path || ''}${name}/`;
+      const historyEntry = historyService.addEntry({
+        operationType: OperationType.CREATE_FOLDER,
+        details: {
+          key: folderPath,
+          name,
+          isDirectory: true
+        },
+        undoable: true
+      });
+      setHistory(historyService.getHistory());
 
-      toast.success('Folder created successfully')
-      mutate()
+      toast.success('Folder created successfully');
+      mutate();
     } catch (error) {
-      toast.error('Failed to create folder')
-      console.error('Create folder error:', error)
+      toast.error('Failed to create folder');
+      console.error('Create folder error:', error);
     }
-  }
-
+  };
+  
   const handleRename = async (newName: string) => {
-    if (!fileToRename) return
+    if (!fileToRename) return;
 
     try {
-      const oldKey = fileToRename.Key
+      const oldKey = fileToRename.Key;
+      const isDirectory = oldKey.endsWith('/');
       
-      // Check if it's a directory (ends with '/')
-      if (oldKey.endsWith('/')) {
-        // For directories, we need to get the new key by replacing the directory name
-        // while keeping the path structure
-        const pathParts = oldKey.split('/')
-        // Remove empty string at the end caused by trailing slash
-        pathParts.pop()
-        // Get the directory name (last part)
-        const dirName = pathParts.pop()
-        // Add the new name and restore the trailing slash
-        pathParts.push(newName)
-        const newKey = pathParts.join('/') + '/'
+      // Track for history
+      let newKey = '';
+      
+      // Handle directory rename
+      if (isDirectory) {
+        const pathParts = oldKey.split('/');
+        pathParts.pop();
+        const dirName = pathParts.pop();
+        pathParts.push(newName);
+        newKey = pathParts.join('/') + '/';
         
         const response = await fetch('/api/folders/rename', {
           method: 'POST',
@@ -511,15 +623,28 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
             oldKey,
             newKey,
           }),
-        })
+        });
 
-        if (!response.ok) throw new Error('Failed to rename directory')
-        toast.success('Directory renamed successfully')
+        if (!response.ok) throw new Error('Failed to rename directory');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.RENAME_FOLDER,
+          details: {
+            oldKey,
+            newKey,
+            isDirectory: true
+          },
+          undoable: true
+        });
+        setHistory(historyService.getHistory());
+        
+        toast.success('Directory renamed successfully');
       } else {
-        // Handle regular file rename as before
-        const pathParts = oldKey.split('/')
-        pathParts[pathParts.length - 1] = newName
-        const newKey = pathParts.join('/')
+        // Handle file rename
+        const pathParts = oldKey.split('/');
+        pathParts[pathParts.length - 1] = newName;
+        newKey = pathParts.join('/');
 
         const response = await fetch('/api/files/rename', {
           method: 'POST',
@@ -530,18 +655,31 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
             oldKey,
             newKey,
           }),
-        })
+        });
 
-        if (!response.ok) throw new Error('Failed to rename file')
-        toast.success('File renamed successfully')
+        if (!response.ok) throw new Error('Failed to rename file');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.RENAME_FILE,
+          details: {
+            oldKey,
+            newKey,
+            isDirectory: false
+          },
+          undoable: true
+        });
+        setHistory(historyService.getHistory());
+        
+        toast.success('File renamed successfully');
       }
       
-      mutate()
+      mutate();
     } catch (error) {
-      toast.error('Failed to rename item')
-      console.error('Rename error:', error)
+      toast.error('Failed to rename item');
+      console.error('Rename error:', error);
     }
-  }
+  };
 
   const openRenameModal = (file: FileObject) => {
     setFileToRename(file)
@@ -574,10 +712,22 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
         if (!response.ok) throw new Error('Folder deletion failed');
         
         const data = await response.json();
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.DELETE_FOLDER,
+          details: {
+            key,
+            isDirectory: true
+          },
+          undoable: false // For now, we don't support restoring deleted folders
+        });
+        setHistory(historyService.getHistory());
+        
         toast.success(`Folder deleted successfully! Removed ${data.objectsDeleted} items.`);
       } else {
         // Handle file deletion
-        const response = await fetch('/api/delete', {
+        const response = await fetch('/api/files/delete', {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json'
@@ -586,6 +736,17 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
         });
         
         if (!response.ok) throw new Error('File deletion failed');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.DELETE_FILE,
+          details: {
+            key,
+            isDirectory: false
+          },
+          undoable: false // For now, we don't support restoring deleted files
+        });
+        setHistory(historyService.getHistory());
         
         toast.success('File deleted successfully!');
       }
@@ -652,6 +813,20 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
       })
       mutate()
 
+      // Add history entry for upload
+      const uploadPath = `${fileToSetPrivacy.path}${fileToSetPrivacy.file.name}`;
+      const historyEntry = historyService.addEntry({
+        operationType: OperationType.UPLOAD_FILE,
+        details: {
+          key: uploadPath,
+          name: fileToSetPrivacy.file.name,
+          size: fileToSetPrivacy.file.size,
+          isDirectory: false
+        },
+        undoable: true
+      });
+      setHistory(historyService.getHistory());
+      
       // Handle remaining files if any
       if (fileToSetPrivacy.remainingFiles && fileToSetPrivacy.remainingFiles.length > 0) {
         const [nextFile, ...remainingFiles] = fileToSetPrivacy.remainingFiles
@@ -760,6 +935,13 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     itemToDelete,
     setItemToDelete,
     handleDeleteConfirm,
+
+    // History properties
+    history,
+    clearHistory,
+    undoOperation,
+    isHistoryPanelOpen,
+    setIsHistoryPanelOpen,
   }
 
   return (

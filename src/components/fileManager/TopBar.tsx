@@ -1,4 +1,10 @@
-import { FolderIcon, FolderPlusIcon, PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { 
+  FolderIcon, 
+  FolderPlusIcon, 
+  PlusIcon, 
+  XMarkIcon, 
+  ClockIcon 
+} from '@heroicons/react/24/outline'
 import { useFileManager } from '../../contexts/FileManagerContext'
 import { SearchBar } from '../ui/SearchBar'
 import { ViewSelector } from '../ui/ViewSelector'
@@ -34,7 +40,10 @@ export function TopBar({
     viewMode,
     setViewMode,
     gridSize,
-    setGridSize
+    setGridSize,
+    isHistoryPanelOpen,
+    setIsHistoryPanelOpen,
+    history
   } = useFileManager()
 
   const pane = panes.find(p => p.id === paneId)
@@ -116,6 +125,26 @@ export function TopBar({
             <FolderPlusIcon className="h-5 w-5 mr-1" />
             New Folder
           </button>
+          
+          {/* History Button */}
+          <Tooltip content="View History" position="bottom">
+            <button
+              onClick={() => setIsHistoryPanelOpen(!isHistoryPanelOpen)}
+              className={`inline-flex items-center p-2 border ${
+                isHistoryPanelOpen 
+                  ? 'border-blue-500 bg-blue-50 text-blue-500' 
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              } rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative`}
+            >
+              <ClockIcon className="h-5 w-5" />
+              {history.length > 0 && !isHistoryPanelOpen && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {history.length > 9 ? '9+' : history.length}
+                </span>
+              )}
+            </button>
+          </Tooltip>
+          
           {activeTab?.viewMode === 'grid' && (
             <GridSizeControl
               value={gridSize}
@@ -130,4 +159,4 @@ export function TopBar({
       </div>
     </div>
   )
-} 
+}
