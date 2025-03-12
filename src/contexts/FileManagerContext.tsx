@@ -83,6 +83,7 @@ interface FileManagerContextType {
   handleCreateFolder: (name: string) => Promise<void>
   handleRename: (newName: string) => Promise<void>
   openRenameModal: (file: FileObject) => void
+  handleDeleteFolder: (key: string) => Promise<void>
   
   // Utilities
   formatSize: (bytes: number) => string
@@ -94,6 +95,13 @@ interface FileManagerContextType {
   fileToSetPrivacy: FileToUpload | null
   setFileToSetPrivacy: (file: FileToUpload | null) => void
   handleSetPrivacy: (isPrivate: boolean) => Promise<void>
+
+  // Delete Modal
+  isDeleteModalOpen: boolean;
+  setIsDeleteModalOpen: (isOpen: boolean) => void;
+  itemToDelete: { key: string; isDirectory: boolean; itemCount?: number } | null;
+  setItemToDelete: (item: { key: string; isDirectory: boolean; itemCount?: number } | null) => void;
+  handleDeleteConfirm: () => Promise<void>;
 }
 
 // Fetcher function
@@ -146,6 +154,10 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   // Privacy Modal state
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false)
   const [fileToSetPrivacy, setFileToSetPrivacy] = useState<FileToUpload | null>(null)
+
+  // Delete Modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ key: string; isDirectory: boolean; itemCount?: number } | null>(null);
   
   // Get active pane and tab
   const getActivePane = useCallback(() => {
@@ -421,23 +433,8 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
 
   // File operations
   const handleDelete = async (key: string) => {
-    if (!confirm('Are you sure you want to delete this file?')) return
-
-    try {
-      const response = await fetch('/api/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key }),
-      })
-
-      if (!response.ok) throw new Error('Delete failed')
-
-      toast.success('File deleted successfully!')
-      mutate()
-    } catch (error) {
-      toast.error('Failed to delete file')
-      console.error('Delete error:', error)
-    }
+    setItemToDelete({ key, isDirectory: false });
+    setIsDeleteModalOpen(true);
   }
 
   const handleDownload = async (key: string) => {
@@ -550,6 +547,57 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     setFileToRename(file)
     setIsRenameModalOpen(true)
   }
+
+  const handleDeleteFolder = async (key: string) => {
+    // You may want to add logic here to count items in the folder if needed
+    setItemToDelete({ key, isDirectory: true });
+    setIsDeleteModalOpen(true);
+  };
+
+  // Add new function to handle confirmed deletion
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+    
+    const { key, isDirectory } = itemToDelete;
+    
+    try {
+      if (isDirectory) {
+        // Handle folder deletion
+        const response = await fetch('/api/folders/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ key })
+        });
+        
+        if (!response.ok) throw new Error('Folder deletion failed');
+        
+        const data = await response.json();
+        toast.success(`Folder deleted successfully! Removed ${data.objectsDeleted} items.`);
+      } else {
+        // Handle file deletion
+        const response = await fetch('/api/delete', {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ key })
+        });
+        
+        if (!response.ok) throw new Error('File deletion failed');
+        
+        toast.success('File deleted successfully!');
+      }
+      
+      mutate();
+      setIsDeleteModalOpen(false);
+      setItemToDelete(null);
+    } catch (error) {
+      toast.error(`Failed to delete ${isDirectory ? 'folder' : 'file'}`);
+      console.error('Deletion error:', error);
+    }
+  };
 
   // Handle privacy setting
   const handleSetPrivacy = useCallback(async (isPrivate: boolean) => {
@@ -693,6 +741,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     handleCreateFolder,
     handleRename,
     openRenameModal,
+    handleDeleteFolder,
     
     // Utilities
     formatSize,
@@ -704,6 +753,13 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     fileToSetPrivacy,
     setFileToSetPrivacy,
     handleSetPrivacy,
+
+    // Delete Modal
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
+    itemToDelete,
+    setItemToDelete,
+    handleDeleteConfirm,
   }
 
   return (

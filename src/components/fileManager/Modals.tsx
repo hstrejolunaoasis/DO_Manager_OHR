@@ -2,6 +2,7 @@ import { useFileManager } from '../../contexts/FileManagerContext'
 import { NewFolderModal } from '../ui/NewFolderModal'
 import { RenameModal } from '../ui/RenameModal'
 import { PrivacyModal } from '../ui/PrivacyModal'
+import { DeleteConfirmationModal } from '../ui/DeleteConfirmationModal'
 
 export function Modals() {
   const {
@@ -17,7 +18,12 @@ export function Modals() {
     setIsPrivacyModalOpen,
     fileToSetPrivacy,
     setFileToSetPrivacy,
-    handleSetPrivacy
+    handleSetPrivacy,
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
+    itemToDelete,
+    setItemToDelete,
+    handleDeleteConfirm
   } = useFileManager()
 
   return (
@@ -48,6 +54,18 @@ export function Modals() {
         onSubmit={handleSetPrivacy}
         filename={fileToSetPrivacy?.file.name || ''}
         remainingCount={fileToSetPrivacy?.remainingFiles?.length || 0}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setItemToDelete(null)
+        }}
+        onConfirm={handleDeleteConfirm}
+        itemName={itemToDelete?.key.split('/').pop() || ''}
+        isDirectory={itemToDelete?.isDirectory || false}
+        itemCount={itemToDelete?.itemCount || 0}
       />
     </>
   )

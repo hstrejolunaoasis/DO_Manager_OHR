@@ -1,4 +1,4 @@
-import { FolderIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { TrashIcon, PencilIcon, FolderIcon } from '@heroicons/react/24/outline'
 import { useFileManager } from '../../contexts/FileManagerContext'
 import { FileObject } from '../../contexts/FileManagerContext'
 
@@ -8,7 +8,14 @@ interface DirectoryListProps {
 }
 
 export function DirectoryList({ directories, paneId }: DirectoryListProps) {
-  const { navigateToFolder, getDirectoryName, openRenameModal, viewMode, formatSize } = useFileManager()
+  const { 
+    navigateToFolder, 
+    getDirectoryName, 
+    openRenameModal, 
+    viewMode, 
+    formatSize,
+    handleDeleteFolder 
+  } = useFileManager()
 
   if (directories.length === 0) {
     return null
@@ -45,6 +52,16 @@ export function DirectoryList({ directories, paneId }: DirectoryListProps) {
               >
                 <PencilIcon className="w-4 h-4" />
               </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFolder(dir.Key);
+                }}
+                className="absolute top-2 right-8 p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Delete directory"
+              >
+                <TrashIcon className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <div key={dir.Key} className="relative group flex items-left justify-between p-2 rounded-lg hover:bg-gray-50">
@@ -58,9 +75,6 @@ export function DirectoryList({ directories, paneId }: DirectoryListProps) {
                     <div className="text-sm font-medium text-gray-900 truncate">
                       {getDirectoryName(dir.Key)}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Directory
-                    </p>
                   </div>
                 </button>
               </div>
@@ -75,6 +89,16 @@ export function DirectoryList({ directories, paneId }: DirectoryListProps) {
                   title="Rename directory"
                 >
                   <PencilIcon className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteFolder(dir.Key);
+                  }}
+                  className="p-2 text-gray-400 hover:text-red-500"
+                  title="Delete directory"
+                >
+                  <TrashIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
