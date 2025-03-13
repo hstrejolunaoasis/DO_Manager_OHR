@@ -6,6 +6,7 @@ import {
   ClockIcon 
 } from '@heroicons/react/24/outline'
 import { useFileManager } from '../../contexts/FileManagerContext'
+import { useUIState } from '../../contexts/fileManager/UIStateContext'
 import { SearchBar } from '../ui/SearchBar'
 import { ViewSelector } from '../ui/ViewSelector'
 import { GridSizeControl } from '../ui/GridSizeControl'
@@ -36,7 +37,6 @@ export function TopBar({
     addNewTab,
     navigateToFolder,
     handleSearchChange,
-    setIsNewFolderModalOpen,
     viewMode,
     setViewMode,
     gridSize,
@@ -45,6 +45,8 @@ export function TopBar({
     setIsHistoryPanelOpen,
     history
   } = useFileManager()
+
+  const { setIsNewFolderModalOpen } = useUIState()
 
   const pane = panes.find(p => p.id === paneId)
   if (!pane) return null
@@ -152,8 +154,8 @@ export function TopBar({
             />
           )}
           <ViewSelector
-            currentView={activeTab?.viewMode || 'grid'}
-            onViewChange={setViewMode}
+            value={viewMode}
+            onChange={setViewMode}
           />
         </div>
       </div>

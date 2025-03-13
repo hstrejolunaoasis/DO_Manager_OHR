@@ -9,8 +9,8 @@ import { Modals } from './fileManager/Modals'
 
 export default function FileManager() {
   return (
-    <FileOperationsProvider>
-      <UIStateProvider>
+    <UIStateProvider>
+      <FileOperationsProvider>
         <PaneProvider>
           <HistoryProvider>
             <div className="h-full flex flex-col bg-white rounded-lg shadow">
@@ -19,7 +19,7 @@ export default function FileManager() {
             </div>
           </HistoryProvider>
         </PaneProvider>
-      </UIStateProvider>
-    </FileOperationsProvider>
+      </FileOperationsProvider>
+    </UIStateProvider>
   )
 }
