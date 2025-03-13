@@ -1,9 +1,10 @@
-import { useFileManager } from '../../contexts/FileManagerContext'
 import { NewFolderModal } from '../ui/NewFolderModal'
 import { RenameModal } from '../ui/RenameModal'
 import { PrivacyModal } from '../ui/PrivacyModal'
 import { DeleteConfirmationModal } from '../ui/DeleteConfirmationModal'
 import { HistoryPanel } from './HistoryPanel'
+import { useUIState } from '../../contexts/fileManager/UIStateContext'
+import { useFileOperations } from '../../contexts/fileManager/FileOperationsContext'
 
 export function Modals() {
   const {
@@ -13,21 +14,23 @@ export function Modals() {
     setIsRenameModalOpen,
     fileToRename,
     setFileToRename,
-    handleCreateFolder,
-    handleRename,
     isPrivacyModalOpen,
     setIsPrivacyModalOpen,
     fileToSetPrivacy,
     setFileToSetPrivacy,
-    handleSetPrivacy,
     isDeleteModalOpen,
     setIsDeleteModalOpen,
     itemToDelete,
     setItemToDelete,
-    handleDeleteConfirm,
-    // New history panel state
     isHistoryPanelOpen
-  } = useFileManager()
+  } = useUIState()
+
+  const {
+    handleCreateFolder,
+    handleRename,
+    handleSetPrivacy,
+    handleDeleteConfirm
+  } = useFileOperations()
 
   return (
     <>
