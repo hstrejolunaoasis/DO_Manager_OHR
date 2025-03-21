@@ -561,40 +561,42 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
   }
 
   const handleCreateFolder = async (name: string) => {
-    try {
-      const response = await fetch('/api/folders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          path: activeTab?.path,
-          name,
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to create folder');
-      
-      // Add history entry
-      const folderPath = `${activeTab?.path || ''}${name}/`;
-      const historyEntry = historyService.addEntry({
-        operationType: OperationType.CREATE_FOLDER,
-        details: {
-          key: folderPath,
-          name,
-          isDirectory: true
-        },
-        undoable: true
-      });
-      setHistory(historyService.getHistory());
-
-      toast.success('Folder created successfully');
-      mutate();
-    } catch (error) {
-      toast.error('Failed to create folder');
-      console.error('Create folder error:', error);
-    }
-  };
+      try {
+        const currentPath = activeTab?.path || '';
+        const folderPath = `${currentPath}${name}/`;
+    
+        const response = await fetch('/api/folders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            path: currentPath,
+            name,
+          }),
+        });
+    
+        if (!response.ok) throw new Error('Failed to create folder');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.CREATE_FOLDER,
+          details: {
+            key: folderPath,
+            name,
+            isDirectory: true
+          },
+          undoable: true
+        });
+        setHistory(historyService.getHistory());
+    
+        toast.success('Folder created successfully');
+        await mutate();
+      } catch (error) {
+        toast.error('Failed to create folder');
+        console.error('Create folder error:', error);
+      }
+    };
   
   const handleRename = async (newName: string) => {
     if (!fileToRename) return;
