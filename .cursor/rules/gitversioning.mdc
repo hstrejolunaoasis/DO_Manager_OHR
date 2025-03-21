@@ -1,0 +1,131 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# DO Manager Git Commit Strategy
+
+## Context
+- This rule applies to all git operations in the project
+- Follows a "molecular" approach to commits
+- Establishes consistent conventions for commit messages and workflow
+
+## Requirements
+- Make small, focused commits with single responsibility
+- Follow established commit message convention
+- Group related changes logically
+- Separate refactoring from feature work
+
+## Commit Structure
+- Keep commits under 300 lines of code when possible
+- Group changes by component or feature
+- Complete one logical change per commit
+- Ensure each commit leaves the codebase in a working state
+
+## Commit Message Convention
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code restructuring without changing behavior
+- `docs`: Documentation changes
+- `style`: Formatting, styling changes (whitespace, semicolons)
+- `test`: Adding/fixing tests
+- `chore`: Build process, dependencies, config changes
+- `perf`: Performance improvements
+
+### Scope Examples
+- `api`: API endpoints and routes
+- `auth`: Authentication functionality
+- `ui`: UI components
+- `hooks`: Custom hooks
+- `context`: Context providers
+- `utils`: Utility functions
+- `types`: TypeScript types and interfaces
+
+### Subject Guidelines
+- Use imperative, present tense (e.g., "add" not "added" or "adds")
+- Keep under 50 characters
+- Do not end with a period
+- Be descriptive about what was changed
+
+### Body Guidelines
+- Optional detailed explanation of changes
+- Wrap at 72 characters
+- Explain "what" and "why" rather than "how"
+- Include motivation for the change
+
+### Footer Guidelines
+- Reference issue numbers: "Closes #123", "Fixes #456"
+- Include breaking changes with "BREAKING CHANGE:" prefix
+
+## Git Workflow Commands
+
+```bash
+# 1. Create feature branch
+git checkout -p main
+git pull
+git checkout -b feat/bucket-selector
+
+# 2. Stage changes by component/scope
+git add src/components/bucket-selector.tsx
+git status
+
+# 3. Commit with meaningful message
+git commit -m "feat(ui): implement bucket selector component"
+
+# 4. Add related tests separately
+git add src/components/__tests__/bucket-selector.test.tsx
+git commit -m "test(ui): add tests for bucket selector component"
+
+# 5. Push feature branch
+git push -u origin feat/bucket-selector
+
+# 6. Before merging, keep branch updated
+git fetch origin
+git rebase origin/main
+```
+
+## Pull Request Strategy
+- Use PR title matching commit convention
+- Summarize changes in PR description
+- Reference related issues with `Fixes #123`
+- Request review from relevant team members
+- Keep PRs focused and of manageable size
+
+## Examples
+<example>
+# Good commit messages
+feat(auth): implement JWT token refresh mechanism
+fix(api): handle empty response in bucket fetching
+refactor(hooks): extract common logic from useProfile hook
+docs(readme): update installation instructions
+style(ui): align button elements consistently
+test(utils): add tests for date formatting functions
+chore(deps): update React to version 19
+</example>
+
+<example type="invalid">
+# Bad commit messages
+fixed a bug
+WIP
+updated stuff
+Added new feature and fixed some bugs and did some refactoring
+</example>
+
+## Critical Rules
+- ALWAYS use the commit message convention
+- KEEP commits small and focused
+- SEPARATE refactoring from feature work
+- REFERENCE issue numbers when applicable
+- NEVER commit directly to main branch
+- REBASE feature branches before merging
+- ORGANIZE commits by logical units of work
+- USE descriptive branch names with type prefix

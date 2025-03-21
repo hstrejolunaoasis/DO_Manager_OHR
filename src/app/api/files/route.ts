@@ -7,10 +7,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const prefix = searchParams.get('prefix') || ''
     const search = searchParams.get('search')?.toLowerCase() || ''
+    const bucketName = searchParams.get('bucket') || BUCKET_NAME
 
     // Don't use delimiter for search to get all nested contents
     const command = new ListObjectsV2Command({
-      Bucket: BUCKET_NAME,
+      Bucket: bucketName,
       Prefix: prefix,
       Delimiter: search ? undefined : '/',
     })

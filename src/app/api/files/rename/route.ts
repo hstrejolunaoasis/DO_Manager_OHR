@@ -4,7 +4,8 @@ import { spacesClient, BUCKET_NAME } from '@/utils/spaces-client'
 
 export async function POST(request: Request) {
   try {
-    const { oldKey, newKey } = await request.json()
+    const { oldKey, newKey, bucket } = await request.json()
+    const bucketName = bucket || BUCKET_NAME
 
     if (!oldKey || !newKey) {
       return NextResponse.json({ error: 'Both oldKey and newKey are required' }, { status: 400 })
@@ -13,8 +14,8 @@ export async function POST(request: Request) {
     // Copy the object with the new key
     await spacesClient.send(
       new CopyObjectCommand({
-        Bucket: BUCKET_NAME,
-        CopySource: `${BUCKET_NAME}/${oldKey}`,
+        Bucket: bucketName,
+        CopySource: `${bucketName}/${oldKey}`,
         Key: newKey,
       })
     )
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     // Delete the old object
     await spacesClient.send(
       new DeleteObjectCommand({
-        Bucket: BUCKET_NAME,
+        Bucket: bucketName,
         Key: oldKey,
       })
     )
