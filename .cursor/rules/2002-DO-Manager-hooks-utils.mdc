@@ -76,4 +76,4 @@ export const customHook = (param) => {
 - NEVER use default exports for hooks or utilities
 - PLACE all hooks in src/hooks directory
 - ORGANIZE utility functions by domain
-- USE function declarations for hooks
+- USE function declarations for hooks 

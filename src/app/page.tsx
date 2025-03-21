@@ -1,4 +1,5 @@
 import FileManager from '@/components/FileManager'
+import { BucketManager } from '@/components/bucket/bucket-manager'
 
 export default function Home() {
   return (
@@ -24,8 +25,13 @@ export default function Home() {
         </div>
       </header>
       
-      <div className="flex-1 overflow-hidden">
-        <FileManager />
+      <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
+        <div className="md:col-span-1">
+          <BucketManager />
+        </div>
+        <div className="md:col-span-3">
+          <FileManager />
+        </div>
       </div>
     </div>
   )
