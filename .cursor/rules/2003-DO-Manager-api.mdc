@@ -1,0 +1,106 @@
+---
+description: FOLLOW these patterns for API routes and backend code in the DO Manager OHR project
+globs: src/app/api/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# DO Manager API and Backend Conventions
+
+## Context
+- This rule applies to all API route handlers and backend code
+- Project uses Next.js 15 App Router pattern for API routes
+- API routes follow RESTful conventions
+
+## Requirements
+- Follow Next.js 15 Route Handlers API patterns
+- Implement proper error handling and status codes
+- Validate request data using TypeScript types
+- Organize route handlers by resource type
+- Follow consistent response formats
+
+## API Route Structure
+- Place API routes in `src/app/api` directory following Next.js 15 route convention
+- Group related endpoints by resource (e.g., `/api/buckets/[id]/route.ts`)
+- Use TypeScript interfaces for request and response types
+- Implement proper validation for request parameters
+
+## Error Handling
+- Use proper HTTP status codes for all responses
+- Return consistent error response format
+- Include informative error messages for client
+- Log detailed errors on server-side
+- Implement try/catch blocks for async operations
+
+## Data Validation
+- Validate all request parameters and body
+- Use TypeScript interfaces for validation
+- Return appropriate error responses for invalid data
+- Sanitize user input before processing
+
+## Examples
+<example>
+// Good API route example
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { BucketFormData } from '@/types/bucket';
+
+export async function POST(request: NextRequest) {
+  try {
+    const data = await request.json() as BucketFormData;
+    
+    // Validate required fields
+    if (!data.name) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+    
+    const bucket = await db.bucket.create({
+      data: {
+        name: data.name,
+        description: data.description,
+        ownerId: 'user-id', // In real code, get from auth
+      },
+    });
+    
+    return NextResponse.json(bucket, { status: 201 });
+  } catch (error) {
+    console.error('Error creating bucket:', error);
+    return NextResponse.json(
+      { error: 'Failed to create bucket' },
+      { status: 500 }
+    );
+  }
+}
+</example>
+
+<example type="invalid">
+// Bad API route example
+export default async function handler(req, res) {
+  // Missing TypeScript types
+  const data = req.body;
+  
+  // Missing validation
+  // Missing error handling
+  
+  const bucket = await db.bucket.create({
+    data: {
+      name: data.name,
+      description: data.description,
+    },
+  });
+  
+  res.status(200).json(bucket);
+}
+</example>
+
+## Critical Rules
+- ALWAYS use Next.js 15 Route Handlers (not API Routes)
+- ALWAYS validate request parameters and body
+- ALWAYS implement proper error handling with appropriate status codes
+- ALWAYS use TypeScript interfaces for request and response data
+- ALWAYS follow RESTful API conventions for endpoints
+- NEVER expose sensitive information in responses
+- ORGANIZE route handlers by resource type
+- USE consistent response formats for all endpoints 

@@ -1,0 +1,97 @@
+---
+description: FOLLOW these conventions and patterns when working on the DO Manager OHR project
+globs: src/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# DO Manager OHR Project Conventions
+
+## Context
+- This rule applies to all TypeScript and React files in the project
+- File organization follows Next.js 15 App Router patterns
+- Project uses React 19, TypeScript, and Tailwind CSS for styling
+
+## Requirements
+- Use React Server Components by default and add 'use client' directive only when necessary
+- Maintain consistent directory structure and naming conventions
+- Follow established component patterns and organization
+- Use proper TypeScript interfaces and types
+
+## File Structure and Organization
+- Place client components in `src/components` directory
+- Organize context providers in `src/context` directory
+- Keep custom hooks in `src/hooks` directory
+- Define TypeScript interfaces in `src/types` directory
+- Organize utility functions in `src/utils` directory
+- Place API services in `src/services` directory
+
+## Component Naming and Styling
+- Use PascalCase for component file names and export names
+- Use kebab-case for directory names (e.g., `bucket-selector.tsx`)
+- UI components must be in the `src/components/ui` directory
+- Use named exports for components instead of default exports
+- Feature components should be organized in their own directories
+
+## Coding Standards
+- Use TypeScript interfaces for component props
+- Name interfaces with prefix of component name followed by "Props" (e.g., `BucketSelectorProps`)
+- Use React Context API for global state management
+- Export context hooks with "use" prefix (e.g., `useBucket`)
+- Include proper error handling for context hooks (check for undefined)
+- Use function declarations for components (not arrow functions)
+- Use Tailwind CSS for styling with className strings
+
+## React Patterns
+- Use custom hooks for reusable logic
+- Context providers should include loading states
+- Use Next.js navigation hooks (`useRouter`, `usePathname`, `useSearchParams`)
+- Always include TypeScript types for component props and state
+- Implement proper error handling in async functions
+
+## Examples
+<example>
+// Good component example
+'use client';
+
+import { useState } from 'react';
+import { useBucket } from '@/context/bucket-context';
+
+interface BucketSelectorProps {
+  buckets: Array<{ id: string; name: string }>;
+}
+
+export function BucketSelector({ buckets }: BucketSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const { currentBucket, setCurrentBucket } = useBucket();
+  
+  return (
+    // Component JSX
+  );
+}
+</example>
+
+<example type="invalid">
+// Bad component example
+import React from 'react';
+
+// Missing interface for props
+export default function bucketSelector(props) {
+  const [open, setOpen] = React.useState(false);
+  
+  // Missing proper context usage
+  return (
+    // Component JSX
+  );
+}
+</example>
+
+## Critical Rules
+- ALWAYS use TypeScript interfaces for props
+- USE PascalCase for component names
+- USE kebab-case for file and directory names
+- ALWAYS extract reusable logic into custom hooks
+- NEVER use default exports for components
+- ALWAYS add 'use client' directive when using client-side React features
+- PLACE context providers in src/context directory
+- DEFINE all types in src/types directory
+- USE named exports for all components and hooks 

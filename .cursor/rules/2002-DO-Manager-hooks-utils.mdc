@@ -1,0 +1,79 @@
+---
+description: FOLLOW these patterns for hooks and utilities in the DO Manager OHR project
+globs: src/{hooks,utils}/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# DO Manager Hooks and Utilities Conventions
+
+## Context
+- This rule applies to all hook and utility files in the project
+- Hooks have specific patterns and naming conventions
+- Utility functions follow specific organization and export patterns
+
+## Requirements
+- Maintain consistent naming conventions for hooks and utility functions
+- Follow established patterns for hook implementation
+- Organize utility functions by domain
+- Use proper TypeScript types for all functions
+
+## Hooks Structure
+- All hooks must be in the `src/hooks` directory
+- Use `use` prefix for all hook names
+- Hooks should always be function declarations (not arrow functions)
+- Always include return type annotations for hooks
+- Implement proper cleanup in hooks with side effects
+
+## Utility Functions
+- Place utility functions in appropriate domain folders under `src/utils`
+- Export utility functions as named exports
+- Group related utility functions in the same file
+- Include TypeScript type definitions for all parameters and return values
+- Implement proper error handling
+
+## Examples
+<example>
+// Good hook example
+import { useState, useEffect } from 'react';
+import { SomeType } from '@/types/some-type';
+
+export function useCustomHook(param: string): { data: SomeType | null; isLoading: boolean } {
+  const [data, setData] = useState<SomeType | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    // Effect logic
+    return () => {
+      // Cleanup logic
+    };
+  }, [param]);
+  
+  return { data, isLoading };
+}
+</example>
+
+<example type="invalid">
+// Bad hook example
+import React from 'react';
+
+// Missing 'use' prefix and proper types
+export const customHook = (param) => {
+  const [data, setData] = React.useState();
+  
+  React.useEffect(() => {
+    // Effect with no cleanup
+  });
+  
+  return data;
+}
+</example>
+
+## Critical Rules
+- ALWAYS use 'use' prefix for hook names
+- ALWAYS include TypeScript types for parameters and return values
+- ALWAYS implement proper cleanup in useEffect hooks
+- ALWAYS handle loading and error states in data fetching hooks
+- NEVER use default exports for hooks or utilities
+- PLACE all hooks in src/hooks directory
+- ORGANIZE utility functions by domain
+- USE function declarations for hooks 
