@@ -3,7 +3,6 @@ import useSWR from 'swr'
 import toast from 'react-hot-toast'
 import historyService from '../services/historyService'
 import { HistoryEntry, OperationType } from '../types/historyTypes'
-import { useBucket } from './BucketContext'
 
 // Types
 export interface FileObject {
@@ -112,9 +111,6 @@ interface FileManagerContextType {
   undoOperation: (entryId: string) => Promise<void>;
   isHistoryPanelOpen: boolean;
   setIsHistoryPanelOpen: (isOpen: boolean) => void;
-
-  // Bucket information
-  currentBucketName: string | null;
 }
 
 // Fetcher function
@@ -132,9 +128,6 @@ const FileManagerContext = createContext<FileManagerContextType | undefined>(und
 
 // Provider component
 export function FileManagerProvider({ children }: { children: ReactNode }) {
-  // Get current bucket from BucketContext
-  const { currentBucket } = useBucket();
-  
   // Pane state
   const [panes, setPanes] = useState<PaneState[]>([{
     id: 'pane-1',
@@ -203,8 +196,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     try {
       const response = await fetch(`/api/files?${new URLSearchParams({
         ...(activeTab.path ? { prefix: activeTab.path } : {}),
-        ...(activeTab.searchQuery ? { search: activeTab.searchQuery } : {}),
-        ...(currentBucket?.name ? { bucket: currentBucket.name } : {})
+        ...(activeTab.searchQuery ? { search: activeTab.searchQuery } : {})
       }).toString()}`)
 
       if (!response.ok) {
@@ -225,7 +217,7 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
         return next
       })
     }
-  }, [panes, currentBucket?.name])
+  }, [panes])
 
   // Update mutate to refresh all panes
   const mutate = useCallback(async () => {
@@ -539,14 +531,6 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     })
   }, [panes, fetchFilesForPane])
 
-  // Update when the bucket changes
-  useEffect(() => {
-    // Refresh all files when bucket changes
-    if (currentBucket) {
-      mutate();
-    }
-  }, [currentBucket, mutate]);
-
   // File operations
   const handleDelete = async (key: string) => {
     setItemToDelete({ key, isDirectory: false });
@@ -576,114 +560,126 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
       .catch(() => toast.error('Failed to copy URL'))
   }
 
-  const handleCreateFolder = async (name: string): Promise<void> => {
-    // Get the current path
-    const activePane = getActivePane()
-    const activeTab = activePane.tabs.find(tab => tab.id === activePane.activeTabId)
-    if (!activeTab) return
-
-    const currentPath = activeTab.path
-    const newFolderPath = `${currentPath}${name}/`
-
+  const handleCreateFolder = async (name: string) => {
     try {
-      const response = await fetch('/api/files', {
+      const response = await fetch('/api/folders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          key: newFolderPath,
-          bucket: currentBucket?.name,
+          path: activeTab?.path,
+          name,
         }),
-      })
+      });
 
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to create folder')
-      }
-
-      // Add to history
-      const historyEntry: HistoryEntry = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
+      if (!response.ok) throw new Error('Failed to create folder');
+      
+      // Add history entry
+      const folderPath = `${activeTab?.path || ''}${name}/`;
+      const historyEntry = historyService.addEntry({
         operationType: OperationType.CREATE_FOLDER,
         details: {
-          key: newFolderPath,
-          bucket: currentBucket?.name,
+          key: folderPath,
+          name,
+          isDirectory: true
         },
-        undoable: true,
-        undone: false,
-      }
-      
-      historyService.addEntry(historyEntry)
-      setHistory(historyService.getHistory())
+        undoable: true
+      });
+      setHistory(historyService.getHistory());
 
-      await mutate()
-      setIsNewFolderModalOpen(false)
-      toast.success('Folder created successfully')
+      toast.success('Folder created successfully');
+      mutate();
     } catch (error) {
-      console.error('Error creating folder:', error)
-      toast.error(`Failed to create folder: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Failed to create folder');
+      console.error('Create folder error:', error);
     }
-  }
+  };
   
-  const handleRename = async (newName: string): Promise<void> => {
-    if (!fileToRename) return
-    
+  const handleRename = async (newName: string) => {
+    if (!fileToRename) return;
+
     try {
-      const oldPath = fileToRename.Key
-      const pathParts = oldPath.split('/')
-      pathParts.pop() // Remove the old filename
+      const oldKey = fileToRename.Key;
+      const isDirectory = oldKey.endsWith('/');
       
-      // For folders, keep the trailing slash
-      const isFolder = fileToRename.Type === 'folder'
-      const newPath = isFolder 
-        ? [...pathParts, newName, ''].join('/') // Folder with trailing slash
-        : [...pathParts, newName].join('/')
+      // Track for history
+      let newKey = '';
       
-      const response = await fetch('/api/files/rename', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          oldKey: oldPath,
-          newKey: newPath,
-          bucket: currentBucket?.name,
-        }),
-      })
-      
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || 'Failed to rename file')
+      // Handle directory rename
+      if (isDirectory) {
+        const pathParts = oldKey.split('/');
+        pathParts.pop();
+        const dirName = pathParts.pop();
+        pathParts.push(newName);
+        newKey = pathParts.join('/') + '/';
+        
+        const response = await fetch('/api/folders/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to rename directory');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.RENAME_FOLDER,
+          details: {
+            oldKey,
+            newKey,
+            isDirectory: true
+          },
+          undoable: true
+        });
+        setHistory(historyService.getHistory());
+        
+        toast.success('Directory renamed successfully');
+      } else {
+        // Handle file rename
+        const pathParts = oldKey.split('/');
+        pathParts[pathParts.length - 1] = newName;
+        newKey = pathParts.join('/');
+
+        const response = await fetch('/api/files/rename', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldKey,
+            newKey,
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to rename file');
+        
+        // Add history entry
+        const historyEntry = historyService.addEntry({
+          operationType: OperationType.RENAME_FILE,
+          details: {
+            oldKey,
+            newKey,
+            isDirectory: false
+          },
+          undoable: true
+        });
+        setHistory(historyService.getHistory());
+        
+        toast.success('File renamed successfully');
       }
       
-      // Add to history
-      const historyEntry: HistoryEntry = {
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        operationType: isFolder ? OperationType.RENAME_FOLDER : OperationType.RENAME_FILE,
-        details: {
-          oldKey: oldPath,
-          newKey: newPath,
-          bucket: currentBucket?.name,
-        },
-        undoable: true,
-        undone: false,
-      }
-      
-      historyService.addEntry(historyEntry)
-      setHistory(historyService.getHistory())
-      
-      await mutate()
-      setIsRenameModalOpen(false)
-      setFileToRename(null)
-      toast.success(`${isFolder ? 'Folder' : 'File'} renamed successfully`)
+      mutate();
     } catch (error) {
-      console.error('Error renaming file:', error)
-      toast.error(`Failed to rename ${fileToRename.Type}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast.error('Failed to rename item');
+      console.error('Rename error:', error);
     }
-  }
+  };
 
   const openRenameModal = (file: FileObject) => {
     setFileToRename(file)
@@ -946,9 +942,6 @@ export function FileManagerProvider({ children }: { children: ReactNode }) {
     undoOperation,
     isHistoryPanelOpen,
     setIsHistoryPanelOpen,
-
-    // Bucket information
-    currentBucketName: currentBucket?.name || null,
   }
 
   return (
